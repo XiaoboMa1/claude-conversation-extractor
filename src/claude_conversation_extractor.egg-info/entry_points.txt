@@ -1,0 +1,5 @@
+[console_scripts]
+claude-extract = extract_claude_logs:launch_interactive
+claude-logs = extract_claude_logs:launch_interactive
+claude-search = search_cli:main
+claude-start = extract_claude_logs:launch_interactive

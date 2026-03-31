@@ -1,0 +1,5 @@
+extract_claude_logs
+interactive_ui
+realtime_search
+search_cli
+search_conversations

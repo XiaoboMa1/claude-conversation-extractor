@@ -9,9 +9,13 @@ src/search_cli.py
 src/search_conversations.py
 src/claude_conversation_extractor.egg-info/PKG-INFO
 src/claude_conversation_extractor.egg-info/SOURCES.txt
+src/claude_conversation_extractor.egg-info/SOURCES.txt:sec.endpointdlp
 src/claude_conversation_extractor.egg-info/dependency_links.txt
+src/claude_conversation_extractor.egg-info/dependency_links.txt:sec.endpointdlp
 src/claude_conversation_extractor.egg-info/entry_points.txt
+src/claude_conversation_extractor.egg-info/entry_points.txt:sec.endpointdlp
 src/claude_conversation_extractor.egg-info/top_level.txt
+src/claude_conversation_extractor.egg-info/top_level.txt:sec.endpointdlp
 tests/test_error_handling.py
 tests/test_extract_claude_logs_aligned.py
 tests/test_extract_comprehensive.py

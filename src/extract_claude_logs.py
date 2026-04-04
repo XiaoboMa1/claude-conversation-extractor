@@ -9,35 +9,9 @@ readable markdown files.
 
 import argparse
 import json
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-
-_EMOJI_RE = re.compile(
-    "["
-    "\U0001F300-\U0001F9FF"
-    "\U0001FA00-\U0001FAFF"
-    "\U00002600-\U000027BF"
-    "\U00002300-\U000023FF"
-    "\U00002B00-\U00002BFF"
-    "\U0000FE00-\U0000FE0F"
-    "\u200d\u23cf\u23e9\u231a\u3030"
-    "]+",
-    flags=re.UNICODE,
-)
-
-_ROLE_LABEL = {
-    "user":        "User",
-    "assistant":   "Claude",
-    "tool_use":    "Tool Use",
-    "tool_result": "Tool Result",
-    "system":      "System",
-}
-
-
-def _strip_emojis(text: str) -> str:
-    return _EMOJI_RE.sub("", text)
 
 
 class ClaudeConversationExtractor:
@@ -78,8 +52,16 @@ class ClaudeConversationExtractor:
 
         print(f"📁 Saving logs to: {self.output_dir}")
 
-    def find_sessions(self, project_path: Optional[str] = None) -> List[Path]:
-        """Find all JSONL session files, sorted by most recent first."""
+    def find_sessions(self, project_path: Optional[str] = None, include_subagents: bool = False) -> List[Path]:
+        """Find all JSONL session files, sorted by most recent first.
+
+        Only returns top-level session files by default (excludes subagent files
+        inside <session-id>/subagents/ directories).
+
+        Args:
+            project_path: Optional project subdirectory to search
+            include_subagents: If True, also include subagent JSONL files
+        """
         if project_path:
             search_dir = self.claude_dir / project_path
         else:
@@ -88,8 +70,65 @@ class ClaudeConversationExtractor:
         sessions = []
         if search_dir.exists():
             for jsonl_file in search_dir.rglob("*.jsonl"):
+                # Skip subagent files unless explicitly requested
+                if not include_subagents and "subagents" in jsonl_file.parts:
+                    continue
                 sessions.append(jsonl_file)
-        return sorted(sessions, key=lambda x: x.stat().st_mtime, reverse=True)
+        # Use (mtime, path) as sort key for stable ordering across calls
+        return sorted(sessions, key=lambda x: (x.stat().st_mtime, str(x)), reverse=True)
+
+    def find_subagents(self, session_path: Path) -> List[Tuple[Path, Dict]]:
+        """Find all subagent JSONL files belonging to a session.
+
+        Args:
+            session_path: Path to the main session JSONL file
+
+        Returns:
+            List of (jsonl_path, meta_dict) tuples, sorted by modification time
+        """
+        session_id = session_path.stem
+        session_dir = session_path.parent / session_id / "subagents"
+
+        subagents = []
+        if session_dir.exists():
+            for jsonl_file in session_dir.glob("*.jsonl"):
+                meta = {}
+                meta_file = jsonl_file.with_suffix(".meta.json")
+                if meta_file.exists():
+                    try:
+                        with open(meta_file, "r", encoding="utf-8") as f:
+                            meta = json.load(f)
+                    except Exception:
+                        pass
+                subagents.append((jsonl_file, meta))
+
+        return sorted(subagents, key=lambda x: x[0].stat().st_mtime)
+
+    def find_session_by_id(self, session_id_prefix: str, quiet: bool = False) -> Optional[Path]:
+        """Find a session JSONL file by session ID prefix.
+
+        Args:
+            session_id_prefix: First 7+ characters of the session ID
+            quiet: If True, suppress error messages (used when falling back to numeric mode)
+
+        Returns:
+            Path to the matching session JSONL, or None
+        """
+        all_sessions = self.find_sessions()
+        matches = [s for s in all_sessions if s.stem.startswith(session_id_prefix)]
+
+        if len(matches) == 1:
+            return matches[0]
+        elif len(matches) > 1:
+            print(f"⚠️  Prefix '{session_id_prefix}' matches {len(matches)} sessions:")
+            for m in matches:
+                print(f"   {m.stem}")
+            print("   Please use a longer prefix to disambiguate.")
+            return None
+        else:
+            if not quiet:
+                print(f"❌ No session found matching prefix '{session_id_prefix}'")
+            return None
 
     def extract_conversation(self, jsonl_path: Path, detailed: bool = False) -> List[Dict[str, str]]:
         """Extract conversation messages from a JSONL file.
@@ -148,7 +187,7 @@ class ClaudeConversationExtractor:
                                 conversation.append(
                                     {
                                         "role": "tool_use",
-                                        "content": f"Tool: {tool_name}\nInput: {json.dumps(tool_input, indent=2, ensure_ascii=False)}",
+                                        "content": f"🔧 Tool: {tool_name}\nInput: {json.dumps(tool_input, indent=2, ensure_ascii=False)}",
                                         "timestamp": entry.get("timestamp", ""),
                                     }
                                 )
@@ -160,7 +199,7 @@ class ClaudeConversationExtractor:
                                 conversation.append(
                                     {
                                         "role": "tool_result",
-                                        "content": f"Result:\n{output}",
+                                        "content": f"📤 Result:\n{output}",
                                         "timestamp": entry.get("timestamp", ""),
                                     }
                                 )
@@ -172,7 +211,7 @@ class ClaudeConversationExtractor:
                                     conversation.append(
                                         {
                                             "role": "system",
-                                            "content": f"System: {msg}",
+                                            "content": f"ℹ️ System: {msg}",
                                             "timestamp": entry.get("timestamp", ""),
                                         }
                                     )
@@ -208,7 +247,7 @@ class ClaudeConversationExtractor:
                         # Include tool use details in detailed mode
                         tool_name = item.get("name", "unknown")
                         tool_input = item.get("input", {})
-                        text_parts.append(f"\nUsing tool: {tool_name}")
+                        text_parts.append(f"\n🔧 Using tool: {tool_name}")
                         text_parts.append(f"Input: {json.dumps(tool_input, indent=2, ensure_ascii=False)}\n")
             return "\n".join(text_parts)
         else:
@@ -310,29 +349,32 @@ class ClaudeConversationExtractor:
             print(f"❌ Error displaying conversation: {e}")
             input("\nPress Enter to continue...")
 
+    def _get_date_info(self, conversation: List[Dict[str, str]]) -> Tuple[str, str]:
+        """Extract date and time strings from conversation's first message."""
+        first_timestamp = conversation[0].get("timestamp", "") if conversation else ""
+        if first_timestamp:
+            try:
+                dt = datetime.fromisoformat(first_timestamp.replace("Z", "+00:00"))
+                return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M:%S")
+            except Exception:
+                pass
+        return datetime.now().strftime("%Y-%m-%d"), ""
+
+    def _make_filename(self, date_str: str, session_id: str, ext: str, filename_label: Optional[str] = None) -> str:
+        """Build output filename. Uses filename_label if provided, otherwise session_id[:8]."""
+        label = filename_label if filename_label else session_id[:8]
+        return f"claude-conversation-{date_str}-{label}.{ext}"
+
     def save_as_markdown(
-        self, conversation: List[Dict[str, str]], session_id: str
+        self, conversation: List[Dict[str, str]], session_id: str,
+        filename_label: Optional[str] = None
     ) -> Optional[Path]:
         """Save conversation as clean markdown file."""
         if not conversation:
             return None
 
-        # Get timestamp from first message
-        first_timestamp = conversation[0].get("timestamp", "")
-        if first_timestamp:
-            try:
-                # Parse ISO timestamp
-                dt = datetime.fromisoformat(first_timestamp.replace("Z", "+00:00"))
-                date_str = dt.strftime("%Y-%m-%d")
-                time_str = dt.strftime("%H:%M:%S")
-            except Exception:
-                date_str = datetime.now().strftime("%Y-%m-%d")
-                time_str = ""
-        else:
-            date_str = datetime.now().strftime("%Y-%m-%d")
-            time_str = ""
-
-        filename = f"claude-conversation-{date_str}-{session_id[:8]}.md"
+        date_str, time_str = self._get_date_info(conversation)
+        filename = self._make_filename(date_str, session_id, "md", filename_label)
         output_path = self.output_dir / filename
 
         with open(output_path, "w", encoding="utf-8") as f:
@@ -343,45 +385,42 @@ class ClaudeConversationExtractor:
                 f.write(f" {time_str}")
             f.write("\n\n---\n\n")
 
-            prev_role = None
             for msg in conversation:
                 role = msg["role"]
-                content = _strip_emojis(msg["content"])
-                label = _ROLE_LABEL.get(role, role.capitalize())
-
-                if role != prev_role:
-                    if prev_role is not None:
-                        f.write("\n\n---\n\n")
-                    f.write(f"[{label}]\n")
-                    prev_role = role
+                content = msg["content"]
+                
+                if role == "user":
+                    f.write("## 👤 User\n\n")
+                    f.write(f"{content}\n\n")
+                elif role == "assistant":
+                    f.write("## 🤖 Claude\n\n")
+                    f.write(f"{content}\n\n")
+                elif role == "tool_use":
+                    f.write("### 🔧 Tool Use\n\n")
+                    f.write(f"{content}\n\n")
+                elif role == "tool_result":
+                    f.write("### 📤 Tool Result\n\n")
+                    f.write(f"{content}\n\n")
+                elif role == "system":
+                    f.write("### ℹ️ System\n\n")
+                    f.write(f"{content}\n\n")
                 else:
-                    f.write("\n\n")
-
-                f.write(content)
-
-            f.write("\n\n---\n\n")
+                    f.write(f"## {role}\n\n")
+                    f.write(f"{content}\n\n")
+                f.write("---\n\n")
 
         return output_path
     
     def save_as_json(
-        self, conversation: List[Dict[str, str]], session_id: str
+        self, conversation: List[Dict[str, str]], session_id: str,
+        filename_label: Optional[str] = None
     ) -> Optional[Path]:
         """Save conversation as JSON file."""
         if not conversation:
             return None
 
-        # Get timestamp from first message
-        first_timestamp = conversation[0].get("timestamp", "")
-        if first_timestamp:
-            try:
-                dt = datetime.fromisoformat(first_timestamp.replace("Z", "+00:00"))
-                date_str = dt.strftime("%Y-%m-%d")
-            except Exception:
-                date_str = datetime.now().strftime("%Y-%m-%d")
-        else:
-            date_str = datetime.now().strftime("%Y-%m-%d")
-
-        filename = f"claude-conversation-{date_str}-{session_id[:8]}.json"
+        date_str, _ = self._get_date_info(conversation)
+        filename = self._make_filename(date_str, session_id, "json", filename_label)
         output_path = self.output_dir / filename
 
         # Create JSON structure
@@ -398,27 +437,15 @@ class ClaudeConversationExtractor:
         return output_path
     
     def save_as_html(
-        self, conversation: List[Dict[str, str]], session_id: str
+        self, conversation: List[Dict[str, str]], session_id: str,
+        filename_label: Optional[str] = None
     ) -> Optional[Path]:
         """Save conversation as HTML file with syntax highlighting."""
         if not conversation:
             return None
 
-        # Get timestamp from first message
-        first_timestamp = conversation[0].get("timestamp", "")
-        if first_timestamp:
-            try:
-                dt = datetime.fromisoformat(first_timestamp.replace("Z", "+00:00"))
-                date_str = dt.strftime("%Y-%m-%d")
-                time_str = dt.strftime("%H:%M:%S")
-            except Exception:
-                date_str = datetime.now().strftime("%Y-%m-%d")
-                time_str = ""
-        else:
-            date_str = datetime.now().strftime("%Y-%m-%d")
-            time_str = ""
-
-        filename = f"claude-conversation-{date_str}-{session_id[:8]}.html"
+        date_str, time_str = self._get_date_info(conversation)
+        filename = self._make_filename(date_str, session_id, "html", filename_label)
         output_path = self.output_dir / filename
 
         # HTML template with modern styling
@@ -543,21 +570,23 @@ class ClaudeConversationExtractor:
         return output_path
 
     def save_conversation(
-        self, conversation: List[Dict[str, str]], session_id: str, format: str = "markdown"
+        self, conversation: List[Dict[str, str]], session_id: str,
+        format: str = "markdown", filename_label: Optional[str] = None
     ) -> Optional[Path]:
         """Save conversation in the specified format.
-        
+
         Args:
             conversation: The conversation data
             session_id: Session identifier
             format: Output format ('markdown', 'json', 'html')
+            filename_label: Optional label for filename (overrides default session_id[:8] truncation)
         """
         if format == "markdown":
-            return self.save_as_markdown(conversation, session_id)
+            return self.save_as_markdown(conversation, session_id, filename_label=filename_label)
         elif format == "json":
-            return self.save_as_json(conversation, session_id)
+            return self.save_as_json(conversation, session_id, filename_label=filename_label)
         elif format == "html":
-            return self.save_as_html(conversation, session_id)
+            return self.save_as_html(conversation, session_id, filename_label=filename_label)
         else:
             print(f"❌ Unsupported format: {format}")
             return None
@@ -674,12 +703,18 @@ class ClaudeConversationExtractor:
             # Get preview and message count
             preview, msg_count = self.get_conversation_preview(session)
 
+            # Check for subagents
+            subagents = self.find_subagents(session)
+            subagent_info = f"   🤖 Subagents: {len(subagents)}" if subagents else ""
+
             # Print formatted info
             print(f"\n{i}. 📁 {project}")
             print(f"   📄 Session: {session_id[:8]}...")
             print(f"   📅 Modified: {modified.strftime('%Y-%m-%d %H:%M')}")
             print(f"   💬 Messages: {msg_count}")
             print(f"   💾 Size: {size_kb:.1f} KB")
+            if subagent_info:
+                print(subagent_info)
             print(f"   📝 Preview: \"{preview}...\"")
 
         print("\n" + "=" * 80)
@@ -719,6 +754,69 @@ class ClaudeConversationExtractor:
 
         return success, total
 
+    def extract_session_with_subagents(
+        self, session_path: Path, format: str = "markdown", detailed: bool = False
+    ) -> int:
+        """Extract a session and all its subagent conversations.
+
+        Produces one file for the main session and one file per subagent.
+
+        Args:
+            session_path: Path to the main session JSONL
+            format: Output format ('markdown', 'json', 'html')
+            detailed: If True, include tool use and system messages
+
+        Returns:
+            Number of files successfully saved
+        """
+        session_id = session_path.stem
+        saved = 0
+
+        # 1. Extract main session
+        print(f"\n📄 Main session: {session_id}")
+        conversation = self.extract_conversation(session_path, detailed=detailed)
+        if conversation:
+            output_path = self.save_conversation(conversation, session_id, format=format)
+            if output_path:
+                print(f"   ✅ {output_path.name} ({len(conversation)} messages)")
+                saved += 1
+        else:
+            print(f"   ⏭️  No conversation content")
+
+        # 2. Find and extract subagents
+        subagents = self.find_subagents(session_path)
+        if subagents:
+            print(f"\n🤖 Found {len(subagents)} subagent(s):")
+            for agent_path, meta in subagents:
+                agent_id = agent_path.stem
+                agent_type = meta.get("agentType", "unknown")
+                agent_desc = meta.get("description", "")
+                print(f"\n   📄 {agent_id}")
+                print(f"      Type: {agent_type}")
+                if agent_desc:
+                    print(f"      Desc: {agent_desc}")
+
+                agent_conv = self.extract_conversation(agent_path, detailed=detailed)
+                if agent_conv:
+                    # Build a descriptive filename label:
+                    # e.g. "1a338b42-sub-agent-a313b2b0c0d57b65d"
+                    label = f"{session_id[:8]}-sub-{agent_id}"
+                    agent_output = self.save_conversation(
+                        agent_conv,
+                        agent_id,  # session_id stored inside the file
+                        format=format,
+                        filename_label=label,
+                    )
+                    if agent_output:
+                        print(f"      ✅ {agent_output.name} ({len(agent_conv)} messages)")
+                        saved += 1
+                else:
+                    print(f"      ⏭️  No conversation content")
+        else:
+            print(f"\n   (No subagents found for this session)")
+
+        return saved
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -727,8 +825,9 @@ def main():
         epilog="""
 Examples:
   %(prog)s --list                    # List all available sessions
-  %(prog)s --extract 1               # Extract the most recent session
-  %(prog)s --extract 1,3,5           # Extract specific sessions
+  %(prog)s --extract 1               # Extract the most recent session (by list number)
+  %(prog)s --extract 1,3,5           # Extract specific sessions by number
+  %(prog)s --extract 724a8e2f        # Extract session by ID prefix (+ subagents)
   %(prog)s --recent 5                # Extract 5 most recent sessions
   %(prog)s --all                     # Extract all sessions
   %(prog)s --output ~/my-logs        # Specify output directory
@@ -743,7 +842,8 @@ Examples:
     parser.add_argument(
         "--extract",
         type=str,
-        help="Extract specific session(s) by number (comma-separated)",
+        help="Extract session(s): by list number (e.g. 1,3,5) or by session ID prefix (e.g. 724a8e2f). "
+             "When using session ID prefix, subagent conversations are automatically included.",
     )
     parser.add_argument(
         "--all", "--logs", action="store_true", help="Extract all sessions"
@@ -932,31 +1032,61 @@ Examples:
 
         if sessions and not args.list:
             print("\nTo extract conversations:")
-            print("  claude-extract --extract <number>      # Extract specific session")
+            print("  claude-extract --extract <number>      # Extract by list number")
+            print("  claude-extract --extract <session_id>  # Extract by session ID prefix (+ subagents)")
             print("  claude-extract --recent 5              # Extract 5 most recent")
             print("  claude-extract --all                   # Extract all sessions")
 
     elif args.extract:
-        sessions = extractor.find_sessions()
+        extract_arg = args.extract.strip()
 
-        # Parse comma-separated indices
-        indices = []
-        for num in args.extract.split(","):
-            try:
-                idx = int(num.strip()) - 1  # Convert to 0-based index
-                indices.append(idx)
-            except ValueError:
-                print(f"❌ Invalid session number: {num}")
-                continue
+        # Strategy: try session ID prefix match first. If the argument is
+        # >= 7 chars or contains non-digit characters, it's almost certainly
+        # a session ID prefix. But even pure-digit strings like "16552058"
+        # can be valid UUID prefixes, so we always attempt a prefix lookup
+        # first, then fall back to numeric index interpretation.
+        #
+        # Comma-separated values (e.g. "1,3,5") are always numeric indices.
 
-        if indices:
-            print(f"\n📤 Extracting {len(indices)} session(s) as {args.format.upper()}...")
+        is_comma_list = "," in extract_arg
+        session_path = None
+
+        if not is_comma_list and len(extract_arg) >= 7:
+            # Only attempt session ID prefix match for inputs >= 7 chars.
+            # Shorter values (like "3" or "12") are treated as list numbers.
+            # Session ID prefixes need at least 7 chars to be unambiguous.
+            session_path = extractor.find_session_by_id(extract_arg, quiet=True)
+
+        if session_path:
+            # ── Session ID prefix mode: extract session + all subagents ──
+            print(f"\n📤 Extracting session {session_path.stem[:8]}... (+ subagents) as {args.format.upper()}...")
             if args.detailed:
                 print("📋 Including detailed tool use and system messages")
-            success, total = extractor.extract_multiple(
-                sessions, indices, format=args.format, detailed=args.detailed
+            saved = extractor.extract_session_with_subagents(
+                session_path, format=args.format, detailed=args.detailed
             )
-            print(f"\n✅ Successfully extracted {success}/{total} sessions")
+            print(f"\n✅ Successfully saved {saved} file(s)")
+        else:
+            # ── Numeric index mode ──
+            sessions = extractor.find_sessions()
+
+            indices = []
+            for num in extract_arg.split(","):
+                try:
+                    idx = int(num.strip()) - 1  # Convert to 0-based index
+                    indices.append(idx)
+                except ValueError:
+                    print(f"❌ Invalid argument: {num} (not a list number or session ID prefix)")
+                    continue
+
+            if indices:
+                print(f"\n📤 Extracting {len(indices)} session(s) as {args.format.upper()}...")
+                if args.detailed:
+                    print("📋 Including detailed tool use and system messages")
+                success, total = extractor.extract_multiple(
+                    sessions, indices, format=args.format, detailed=args.detailed
+                )
+                print(f"\n✅ Successfully extracted {success}/{total} sessions")
 
     elif args.recent:
         sessions = extractor.find_sessions()

@@ -7,10 +7,6 @@ name = "claude-conversation-extractor"
 version = "1.1.2"
 description = "Export Claude Code conversations from ~/.claude/projects. Extract, search, and backup Claude chat history to markdown files."
 readme = "README.md"
-authors = [
-    {name = "Dustin Kirby"}
-]
-license = {text = "MIT"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -42,13 +38,8 @@ keywords = [
 requires-python = ">=3.8"
 dependencies = []
 
-[project.urls]
-Homepage = "https://github.com/ZeroSumQuant/claude-conversation-extractor"
-Documentation = "https://github.com/ZeroSumQuant/claude-conversation-extractor#readme"
-Repository = "https://github.com/ZeroSumQuant/claude-conversation-extractor"
-Issues = "https://github.com/ZeroSumQuant/claude-conversation-extractor/issues"
-
 [project.scripts]
+extract = "extract_claude_logs:launch_interactive"
 claude-extract = "extract_claude_logs:launch_interactive"
 claude-logs = "extract_claude_logs:launch_interactive"
 claude-start = "extract_claude_logs:launch_interactive"

@@ -5,11 +5,6 @@ Summary: Export Claude Code conversations from ~/.claude/projects. Extract, sear
 Home-page: https://github.com/ZeroSumQuant/claude-conversation-extractor
 Author: Dustin Kirby
 Author-email: 
-License: MIT
-Project-URL: Homepage, https://github.com/ZeroSumQuant/claude-conversation-extractor
-Project-URL: Documentation, https://github.com/ZeroSumQuant/claude-conversation-extractor#readme
-Project-URL: Repository, https://github.com/ZeroSumQuant/claude-conversation-extractor
-Project-URL: Issues, https://github.com/ZeroSumQuant/claude-conversation-extractor/issues
 Keywords: export-claude-code-conversations,claude-conversation-extractor,claude-code-export-tool,backup-claude-code-logs,save-claude-chat-history,claude-jsonl-to-markdown,extract-claude-sessions,claude-code-no-export-button,where-are-claude-code-logs-stored,claude-terminal-logs,anthropic-claude-code,search-claude-conversations,claude-code-logs-location,~/.claude/projects,export-claude-conversations,extract-claude-code,backup-claude-sessions
 Classifier: Development Status :: 5 - Production/Stable
 Classifier: Intended Audience :: Developers
@@ -32,6 +27,7 @@ Classifier: Natural Language :: English
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 License-File: LICENSE
+Dynamic: author
 Dynamic: home-page
 Dynamic: license-file
 Dynamic: requires-python

@@ -45,15 +45,6 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ZeroSumQuant/claude-conversation-extractor",
-    project_urls={
-        "Bug Tracker": (
-            "https://github.com/ZeroSumQuant/claude-conversation-extractor/issues"
-        ),
-        "Documentation": (
-            "https://github.com/ZeroSumQuant/claude-conversation-extractor#readme"
-        ),
-        "Source": "https://github.com/ZeroSumQuant/claude-conversation-extractor",
-    },
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
@@ -84,12 +75,14 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "claude-extract=extract_claude_logs:launch_interactive",  # Primary command
-            "claude-logs=extract_claude_logs:launch_interactive",     # Kept for backward compatibility
-            "claude-start=extract_claude_logs:launch_interactive",    # Alternative alias
-            "claude-search=search_cli:main",                          # Direct search command
+            "extract=extract_claude_logs:launch_interactive",
+            "claude-extract=extract_claude_logs:launch_interactive",
+            "claude-logs=extract_claude_logs:launch_interactive",
+            "claude-start=extract_claude_logs:launch_interactive",
+            "claude-search=search_cli:main",
         ],
     },
+
     cmdclass={
         "install": PostInstallCommand,
     },

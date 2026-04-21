@@ -1,0 +1,5227 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.github/
+  workflows/
+    publish.yml
+    test.yml
+assets/
+  demo.gif
+config/
+  .coveragerc
+  .flake8
+docs/
+  development/
+    CLAUDE.md
+    CONTRIBUTING.md
+  technical/
+    index.md
+    SEO_OPTIMIZATION_SUMMARY.md
+  user/
+    CHANGELOG.md
+    INSTALL.md
+requirements/
+  base.txt
+  dev.txt
+  optional.txt
+scripts/
+  run_tests.py
+src/
+  __init__.py
+  extract_claude_logs.py
+  interactive_ui.py
+  realtime_search.py
+  search_cli.py
+  search_conversations.py
+tests/
+  fixtures/
+    __init__.py
+    sample_conversations.py
+  __init__.py
+  conftest.py
+.gitignore
+LICENSE
+pyproject.toml
+README.md
+setup.py
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".github/workflows/test.yml">
+name: Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install package
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install flake8
+        
+    - name: Lint with flake8
+      run: |
+        flake8 extract_claude_logs.py --max-line-length=100
+        
+    - name: Test CLI help
+      run: |
+        claude-extract --help
+        
+    - name: Test module import
+      run: |
+        python -c "import extract_claude_logs; print('Import successful')"
+</file>
+
+<file path="config/.coveragerc">
+[run]
+source = .
+omit = 
+    venv/*
+    tests/*
+    setup.py
+    demo_interactive.py
+    */site-packages/*
+    */__pycache__/*
+    
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if __name__ == .__main__.:
+    raise AssertionError
+    raise NotImplementedError
+    except ImportError:
+    pass
+    except Exception:
+
+[html]
+directory = htmlcov
+</file>
+
+<file path="config/.flake8">
+[flake8]
+max-line-length = 100
+exclude = 
+    venv,
+    dist,
+    build,
+    .egg-info,
+    .git,
+    __pycache__
+ignore = 
+    # E203 whitespace before ':' - conflicts with black
+    E203,
+    # W503 line break before binary operator - conflicts with black
+    W503
+</file>
+
+<file path="docs/development/CLAUDE.md">
+# Claude Conversation Extractor - Project Context
+
+## Project Overview
+
+This is a standalone tool that extracts Claude Code conversations from the
+undocumented JSONL format in `~/.claude/projects/` and converts them to clean
+markdown files. This is the FIRST publicly available solution for this problem.
+
+## Key Goals
+
+- **Professional Quality**: This project needs to be polished and professional -
+  it's important for the developer's family
+- **Easy Installation**: Setting up PyPI publishing so users can
+  `pip install claude-conversation-extractor`
+- **Wide Adoption**: Make this the go-to solution for Claude Code users
+
+## Repository Structure
+
+```text
+claude-conversation-extractor/
+├── extract_claude_logs.py    # Main script
+├── setup.py                   # PyPI packaging configuration
+├── README.md                  # Professional documentation
+├── LICENSE                    # MIT License with disclaimer
+├── CONTRIBUTING.md            # Contribution guidelines
+├── requirements.txt           # No dependencies (stdlib only)
+├── .gitignore                # Python gitignore
+└── CLAUDE.md                 # This file
+```
+
+## Development Workflow
+
+1. Always create feature branches for new work
+2. Ensure code passes flake8 linting (max-line-length=100)
+3. Test manually before committing
+4. Update version numbers in setup.py for releases
+5. Create detailed commit messages
+
+## Current Status
+
+- ✅ Core functionality complete and tested
+- ✅ Professional documentation
+- ✅ Published to GitHub:
+  <https://github.com/ZeroSumQuant/claude-conversation-extractor>
+- 🚧 Setting up PyPI publishing
+- 📋 TODO: Add tests, CI/CD, screenshots
+
+## PyPI Publishing Setup (In Progress)
+
+1. Update setup.py with proper metadata
+2. Create pyproject.toml for modern packaging
+3. Set up GitHub Actions for automated publishing
+4. Register on PyPI and get API token
+5. Configure repository secrets
+
+## Testing Commands
+
+```bash
+# Test extraction
+python3 extract_claude_logs.py --list
+python3 extract_claude_logs.py --extract 1
+
+# Lint check
+python3 -m flake8 extract_claude_logs.py --max-line-length=100
+
+# Test installation
+pip install -e .
+```
+
+## Important Notes
+
+- No external dependencies (uses only Python stdlib)
+- Supports Python 3.8+
+- Cross-platform (Windows, macOS, Linux)
+- Read-only access to Claude's conversation files
+- Includes legal disclaimer for safety
+
+## Marketing/Sharing Plan
+
+- Anthropic Discord
+- r/ClaudeAI subreddit
+- Hacker News
+- Twitter/X with relevant hashtags
+- Create demo GIF showing the tool in action
+
+## Version History
+
+- 1.0.0 - Initial release (planned)
+  - Core extraction functionality
+  - Multiple output formats
+  - Batch operations
+</file>
+
+<file path="docs/development/CONTRIBUTING.md">
+# Contributing to Claude Conversation Extractor - Help Export Claude Code Conversations
+
+Thank you for helping improve the #1 tool to export Claude Code conversations! 🎉
+
+## How to Contribute to Claude Export Tool
+
+### Report Bugs in Claude Conversation Extraction
+
+Found an issue exporting Claude Code logs? Before reporting, please:
+- Check [existing issues](https://github.com/ZeroSumQuant/claude-conversation-extractor/issues)
+- Search for your error message
+
+When reporting Claude export bugs, include:
+- Operating system and version
+- Python version (`python3 --version`)
+- Claude Code version
+- Steps that caused the export failure
+- Error messages when trying to extract Claude conversations
+- Output of `ls -la ~/.claude/projects/` (to verify Claude logs exist)
+
+### Suggest Features for Claude Code Export
+
+Have ideas to improve exporting Claude conversations? We'd love to hear them!
+
+Enhancement suggestions should include:
+- Clear description of the feature
+- How it helps users export Claude Code logs better
+- Example use case for Claude conversation extraction
+- Possible implementation approach
+
+Popular requests:
+- Export Claude conversations to different formats (PDF, HTML)
+- Batch export with filters
+- Integration with note-taking apps
+- Automated Claude Code backup
+
+### Submit Code to Improve Claude Export
+
+#### Setup Development Environment
+
+```bash
+# Fork and clone Claude Conversation Extractor
+git clone https://github.com/your-username/claude-conversation-extractor.git
+cd claude-conversation-extractor
+
+# Create virtual environment for Claude export development
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install Claude extractor in development mode
+pip install -e .
+
+# Install development dependencies
+pip install -r requirements-dev.txt
+```
+
+#### Development Workflow for Claude Export Features
+
+1. Create feature branch:
+   ```bash
+   git checkout -b feature/better-claude-export
+   ```
+
+2. Make changes to improve Claude Code export
+
+3. Test your changes:
+   ```bash
+   # Run tests
+   pytest
+   
+   # Test Claude export functionality
+   python extract_claude_logs.py --list
+   
+   # Check code quality
+   flake8 . --max-line-length=100
+   black . --check
+   ```
+
+4. Commit using conventional commits:
+   ```bash
+   git commit -m "feat: add PDF export for Claude conversations"
+   ```
+
+5. Push and create PR:
+   ```bash
+   git push origin feature/better-claude-export
+   ```
+
+## Code Standards for Claude Export Tool
+
+### Python Style Guide
+- Follow PEP 8 with 100-character line limit
+- Use black for formatting
+- Use type hints where helpful
+- Document functions that handle Claude Code logs
+
+### Testing Claude Conversation Export
+- Write tests for new export features
+- Test edge cases (empty conversations, corrupt JSONL)
+- Mock file system operations
+- Aim for >90% coverage on new code
+
+### Documentation for Claude Export Features
+- Update README.md for user-facing changes
+- Add docstrings to new functions
+- Include examples of exporting Claude conversations
+- Update CHANGELOG.md
+
+## Pull Request Guidelines for Claude Extractor
+
+### PR Title Format
+Use conventional commit format:
+- `feat: add real-time search for Claude conversations`
+- `fix: handle missing Claude Code logs gracefully`
+- `docs: improve Claude export installation guide`
+- `perf: speed up bulk Claude conversation export`
+
+### PR Description Template
+```markdown
+## What This PR Does
+Describe how this improves exporting Claude Code conversations
+
+## Why This Change
+Explain the benefit to users extracting Claude logs
+
+## Testing
+- [ ] Tested on macOS/Linux/Windows
+- [ ] Added/updated tests
+- [ ] Verified Claude export still works
+- [ ] Documentation updated
+
+## Screenshots (if UI changes)
+Show before/after of Claude export interface
+```
+
+## Areas Needing Help
+
+### High Priority - Claude Export Improvements
+- **Windows testing**: Ensure Claude export works on all Windows versions
+- **Performance**: Optimize large Claude conversation exports
+- **Search**: Improve semantic search for Claude Code logs
+- **UI**: Enhance interactive mode for easier Claude extraction
+
+### Documentation - Help Users Export Claude Code
+- Installation guides for specific platforms
+- Video tutorials showing Claude export process
+- Troubleshooting guides for common issues
+- Translations for non-English Claude Code users
+
+### Testing - Ensure Reliable Claude Export
+- Cross-platform testing
+- Edge case handling
+- Performance benchmarks
+- User experience testing
+
+## Community Guidelines
+
+### Be Respectful
+- Welcome newcomers wanting to export Claude conversations
+- Provide constructive feedback
+- Help others troubleshoot Claude export issues
+
+### Be Patient
+- This is a volunteer project
+- Reviews may take time
+- Focus on helping Claude Code users
+
+### Be Helpful
+- Share your Claude export use cases
+- Help test PRs on your platform
+- Spread the word about the tool
+
+## Questions?
+
+- Open an issue for Claude export questions
+- Discuss in PRs for implementation details
+- Check README for user documentation
+
+Thank you for helping make Claude Conversation Extractor the best tool to export Claude Code logs! Your contributions help thousands of users preserve their AI conversations.
+
+---
+
+**Keywords**: contribute claude conversation extractor, help export claude code, improve claude export tool, claude code logs development, submit PR claude extractor
+</file>
+
+<file path="docs/technical/index.md">
+# Export Claude Code Conversations - The Only Tool That Works
+
+## Can't Export Your Claude Code Chats? We Have The Solution.
+
+Claude Code stores all your AI programming conversations in `~/.claude/projects/` but provides **NO export button**. Your valuable AI pair programming sessions are trapped in undocumented JSONL files.
+
+**Claude Conversation Extractor** is the first and only tool that exports Claude Code conversations to clean, readable markdown files.
+
+## 🚀 Export Claude Code in 30 Seconds
+
+```bash
+# Install the Claude export tool
+pipx install claude-conversation-extractor
+
+# Export your Claude conversations
+claude-logs
+```
+
+That's it! The tool automatically finds all your Claude Code logs and lets you:
+- 🔍 **Search** through all Claude conversations in real-time
+- 📁 **Export** individual, recent, or all Claude sessions
+- 💾 **Backup** your Claude Code logs before they're lost
+- 📝 **Convert** Claude JSONL to clean markdown
+
+## Why You Need to Export Claude Code Conversations
+
+### The Problem with Claude Code
+- ❌ No built-in export functionality
+- ❌ Conversations stored in obscure JSONL format
+- ❌ Located in hidden `~/.claude/projects` folder
+- ❌ Risk of losing valuable AI programming sessions
+- ❌ Can't share Claude conversations with team
+- ❌ No way to search past Claude chats
+
+### What Our Tool Does
+- ✅ **Finds** all Claude Code conversations automatically
+- ✅ **Extracts** from undocumented JSONL format
+- ✅ **Converts** to clean, readable markdown
+- ✅ **Searches** through all your Claude history
+- ✅ **Exports** with proper formatting and timestamps
+- ✅ **Works** on Windows, macOS, and Linux
+
+## Features - Export Claude Code Like a Pro
+
+### 🔍 Real-Time Search
+Search your entire Claude Code history as you type. No flags, no commands - just start typing and see results instantly.
+
+### 📦 Bulk Export
+Export all your Claude conversations at once with `claude-logs --all`. Perfect for backing up before uninstalling or switching machines.
+
+### 🎯 Smart Selection
+Interactive UI lets you select exactly which Claude sessions to export. See dates, sizes, and preview content.
+
+### 🚀 Zero Dependencies
+Pure Python implementation - no external packages required. If Python runs, this tool runs.
+
+### 🖥️ Cross-Platform
+Works wherever Claude Code works - Windows, macOS, Linux. Same commands, same results.
+
+## How to Export Claude Code Conversations
+
+### Quick Start
+```bash
+# Interactive mode (recommended)
+claude-logs
+
+# List all conversations
+claude-logs --list
+
+# Export specific conversations
+claude-logs --extract 1,3,5
+
+# Export recent conversations
+claude-logs --recent 10
+
+# Export everything
+claude-logs --all
+```
+
+### Where Are Claude Code Logs Stored?
+
+**Default Claude Code locations:**
+- macOS/Linux: `~/.claude/projects/*/chat_*.jsonl`
+- Windows: `%USERPROFILE%\.claude\projects\*\chat_*.jsonl`
+
+**After export:**
+- Clean markdown files in `~/Desktop/Claude logs/`
+- Or specify custom location with `--output`
+
+## Installation Guide
+
+### Recommended: Install with pipx
+```bash
+# macOS
+brew install pipx
+pipx ensurepath
+pipx install claude-conversation-extractor
+
+# Windows
+py -m pip install --user pipx
+py -m pipx ensurepath
+pipx install claude-conversation-extractor
+
+# Linux
+sudo apt install pipx  # or dnf, pacman, etc.
+pipx ensurepath
+pipx install claude-conversation-extractor
+```
+
+### Alternative: Install with pip
+```bash
+pip install claude-conversation-extractor
+```
+
+## Frequently Asked Questions
+
+### Q: How do I export Claude Code conversations?
+A: Install our tool with `pipx install claude-conversation-extractor` then run `claude-logs`. It automatically finds and exports your conversations.
+
+### Q: Where does Claude Code store conversations?
+A: Claude Code saves chats in `~/.claude/projects/` as JSONL files. There's no built-in way to export them - that's why this tool exists.
+
+### Q: Can I search my Claude Code history?
+A: Yes! Run `claude-logs search` and start typing. Results appear in real-time.
+
+### Q: Does this work with Claude.ai?
+A: No, this tool is specifically for Claude Code (the desktop app). Claude.ai has its own export feature.
+
+### Q: Is this tool official?
+A: No, this is an independent open-source tool. It reads the local Claude Code files on your computer.
+
+## User Testimonials
+
+> "I thought I lost months of Claude conversations when I switched computers. This tool saved everything!" - Developer
+
+> "Finally! I can search through my Claude history to find that solution from last week." - Data Scientist
+
+> "Essential tool for anyone using Claude Code seriously. Should be built-in." - Software Engineer
+
+## Get Started Now
+
+Don't risk losing your Claude Code conversations. Install the extractor today:
+
+```bash
+pipx install claude-conversation-extractor
+claude-logs
+```
+
+**Links:**
+- [GitHub Repository](https://github.com/ZeroSumQuant/claude-conversation-extractor)
+- [PyPI Package](https://pypi.org/project/claude-conversation-extractor/)
+- [Report Issues](https://github.com/ZeroSumQuant/claude-conversation-extractor/issues)
+
+---
+
+**Keywords**: export claude code conversations, claude conversation extractor, claude code export tool, backup claude code logs, save claude chat history, claude jsonl to markdown, ~/.claude/projects, extract claude sessions, claude code no export button, where are claude code logs stored, claude terminal logs, anthropic claude code export, search claude conversations, find claude code logs location
+
+**Note**: This is an independent tool not affiliated with Anthropic. Use responsibly.
+</file>
+
+<file path="docs/technical/SEO_OPTIMIZATION_SUMMARY.md">
+# SEO Optimization Summary - Claude Conversation Extractor
+
+## What We Optimized
+
+### 1. **README.md** - Main Landing Page
+- **Title**: Added primary keywords "Export Claude Code Conversations to Markdown"
+- **H1**: Emphasized "The ONLY tool to export Claude Code conversations"
+- **Sections**: Used keyword-rich headers targeting search queries
+- **Links**: Internal anchors with descriptive text
+- **Footer**: Added comprehensive keyword list
+
+### 2. **PyPI Metadata** (setup.py & pyproject.toml)
+- **Description**: Front-loaded with "Export Claude Code conversations from ~/.claude/projects"
+- **Keywords**: Replaced generic terms with specific search queries:
+  - export-claude-code-conversations
+  - claude-code-export-tool
+  - where-are-claude-code-logs-stored
+  - claude-jsonl-to-markdown
+
+### 3. **INSTALL.md** - Installation Guide
+- **Title**: "How to Install Claude Conversation Extractor - Export Claude Code Logs"
+- **Headers**: Platform-specific keywords ("Export Claude Code on macOS/Windows/Linux")
+- **Troubleshooting**: Addresses common search queries about installation issues
+- **Commands**: Emphasized throughout for featured snippets
+
+### 4. **CONTRIBUTING.md** - Developer Guide
+- **Title**: Added "Help Export Claude Code Conversations"
+- **Sections**: Focused on Claude export improvements
+- **Examples**: Used Claude-specific terminology throughout
+
+### 5. **CHANGELOG.md** - Version History
+- **Headers**: Added context like "Interactive UI to Export Claude Conversations"
+- **Descriptions**: Emphasized this is the "First Tool to Export Claude Code"
+- **Keywords**: Added relevant terms in footer
+
+### 6. **docs/index.md** - Future Landing Page
+- **Title**: Direct answer to search intent
+- **Structure**: FAQ-style for featured snippets
+- **CTAs**: Multiple installation prompts
+- **Social Proof**: Added testimonials section
+
+## Key SEO Strategies Implemented
+
+### Primary Keywords Targeted
+1. **export claude code conversations** - Main target
+2. **claude code export tool** - Product identifier
+3. **claude code logs location** - Information query
+4. **claude jsonl to markdown** - Technical search
+
+### Long-tail Keywords
+- "can't export claude code conversations"
+- "where are claude code logs stored"
+- "~/.claude/projects"
+- "claude code no export button"
+- "backup claude code sessions"
+
+### SEO Techniques Used
+1. **Keyword Density**: Natural integration throughout content
+2. **Header Optimization**: H1-H3 tags with keywords
+3. **Internal Linking**: Descriptive anchor text
+4. **Meta Descriptions**: Front-loaded with keywords
+5. **Schema Markup Ready**: Structured for future implementation
+6. **FAQ Sections**: Targeting voice search and featured snippets
+
+## Expected Results
+
+### Short Term (1-2 weeks)
+- Improved ranking for "claude code export" queries
+- Better visibility in GitHub search
+- Increased PyPI discovery
+
+### Medium Term (1-3 months)
+- Featured snippets for "how to export claude code"
+- Top 3 rankings for primary keywords
+- Increased organic traffic
+
+### Long Term (3-6 months)
+- Domain authority for Claude Code export queries
+- Natural backlinks from Claude community
+- Become the definitive solution
+
+## Next Steps for Maximum Impact
+
+1. **Create Blog Posts**:
+   - "How to Export Claude Code Conversations: Complete Guide"
+   - "Where Claude Code Stores Your Conversations"
+   - "Claude Code vs Claude.ai: Export Differences"
+
+2. **Submit to Directories**:
+   - Product Hunt
+   - AlternativeTo
+   - Awesome lists on GitHub
+
+3. **Community Engagement**:
+   - Answer questions on Stack Overflow
+   - Post in relevant subreddits
+   - Share in Discord communities
+
+4. **Technical SEO**:
+   - Set up GitHub Pages with sitemap
+   - Add structured data markup
+   - Optimize images with alt text
+
+5. **Link Building**:
+   - Guest posts on AI/dev blogs
+   - YouTube tutorials
+   - Developer forum signatures
+
+Remember: You have first-mover advantage. Execute aggressively while competition is zero.
+</file>
+
+<file path="docs/user/CHANGELOG.md">
+# Changelog - Claude Conversation Extractor Updates
+
+All notable changes to the Claude Code export tool will be documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.1.1] - 2025-08-28 - View Conversations & Better Search Experience
+
+### Added
+- **Conversation Viewer** - View conversations directly in terminal without extracting files
+- **JSON export format** - Export conversations as structured JSON with metadata (Issue #6)
+- **HTML export format** - Beautiful web-viewable format with syntax highlighting (Issue #6)
+- **--format flag** - Choose between markdown, json, or html output formats
+- **--detailed flag** - Include tool use, MCP responses, and system messages (Issue #19)
+- **claude-search command** - Search and view conversations without extraction
+- Complete transcript export showing all conversation details as in Ctrl+R view
+- Pagination support for viewing long conversations
+
+### Fixed
+- Fixed missing `claude-logs` command in PyPI package (Issue #31)
+- Fixed arrow key handling in real-time search (no more weird characters)
+- Fixed search functionality to VIEW conversations instead of forcing extraction
+- All search commands now allow viewing before optional extraction
+- All three commands now work properly: `claude-extract`, `claude-logs`, `claude-start`
+- Updated documentation to clarify `claude-start` vs `claude-extract` usage
+
+### Changed
+- `claude-start` launches interactive UI with ASCII art logo and real-time search
+- `claude-extract` runs standard CLI interface
+- `claude-search` now offers view/extract options instead of auto-extracting
+- Interactive UI search (option F) now views conversations instead of extracting
+- `--search` flag now allows viewing conversations before extraction
+- Simplified README with clear command distinctions at the top
+
+## [Unreleased] - Features to Export Claude Code Conversations
+
+### Planned
+- Export Claude conversations to PDF format
+- Export Claude Code logs to HTML with syntax highlighting
+- Chrome extension to add export button to Claude Code
+- Automated daily backup of Claude conversations
+- Integration with Obsidian for Claude chat archiving
+
+## [1.1.0] - 2025-06-05 - Interactive UI to Export Claude Conversations
+
+### Added - New Ways to Extract Claude Code Logs
+
+- **Interactive UI** for easy Claude conversation extraction
+- New `claude-start` command for quick access to Claude export
+- Support for `--interactive` / `-i` flag to launch UI
+- Support for `--export logs` syntax to extract Claude sessions
+- Beautiful ASCII art banner when exporting Claude Code
+- Interactive selection of multiple Claude conversations
+- Progress tracking during batch Claude exports
+- Colorful terminal output showing Claude extraction status
+- Professional badges showing downloads and GitHub stars
+- Comprehensive test suite for reliable Claude export
+
+### Changed - Improved Claude Code Export Experience
+
+- Updated setup.py to include interactive Claude export UI
+- Enhanced entry points with claude-start shortcut
+- Improved code formatting for better Claude extractor maintenance
+- Better error messages when Claude Code logs not found
+
+### Fixed - Claude Export Bug Fixes
+
+- Line length issues in Claude conversation formatting
+- Trailing whitespace in exported Claude markdown files
+- Version consistency for Claude Conversation Extractor
+- Windows compatibility for Claude Code export paths
+
+## [1.0.0] - 2025-05-25 - First Tool to Export Claude Code Conversations
+
+### 🎉 Initial Release - The ONLY Claude Code Export Solution
+
+- **First tool** to extract conversations from Claude Code
+- Finds Claude logs in ~/.claude/projects automatically
+- Converts Claude JSONL to clean, readable markdown
+- List all Claude Code sessions with metadata
+- Extract single Claude conversations with `--extract N`
+- Export recent Claude chats with `--recent N`  
+- Backup all Claude conversations with `--all`
+- Custom output directory for Claude exports
+- Zero dependencies - pure Python Claude extractor
+- Cross-platform Claude Code export (Windows/Mac/Linux)
+
+---
+
+**Why This Tool Exists**: Claude Code stores all conversations locally but provides NO export functionality. Users were losing valuable AI programming sessions. This tool solves that problem.
+
+**Keywords**: claude conversation extractor changelog, claude code export updates, extract claude logs version history, backup claude sessions releases, claude jsonl to markdown changelog
+</file>
+
+<file path="docs/user/INSTALL.md">
+# How to Install Claude Conversation Extractor - Export Claude Code Logs
+
+This guide helps you install the Claude Code export tool on any platform. If you're getting errors trying to export Claude conversations, you're in the right place!
+
+## Table of Contents
+- [Quick Install - Export Claude Code Conversations](#quick-install-export-claude-code-conversations)
+- [Platform-Specific Instructions](#platform-specific-instructions)
+  - [Export Claude Code on macOS](#export-claude-code-on-macos)
+  - [Export Claude Code on Windows](#export-claude-code-on-windows)
+  - [Export Claude Code on Linux](#export-claude-code-on-linux)
+- [Troubleshooting Claude Export Issues](#troubleshooting-claude-export-issues)
+- [Alternative Methods to Export Claude Conversations](#alternative-methods-to-export-claude-conversations)
+- [Verify Claude Conversation Extractor Installation](#verify-claude-conversation-extractor-installation)
+
+## Quick Install - Export Claude Code Conversations
+
+The easiest way to install the Claude Code export tool is using pipx:
+
+```bash
+# Install pipx first (see platform sections for details)
+pipx install claude-conversation-extractor
+```
+
+This installs the tool to export Claude Code conversations from ~/.claude/projects to markdown files.
+
+## Platform-Specific Instructions
+
+### Export Claude Code on macOS
+
+#### Method 1: Using pipx (Recommended for Claude Code Export)
+
+```bash
+# Install pipx via Homebrew
+brew install pipx
+pipx ensurepath
+
+# Restart terminal or run:
+source ~/.zshrc  # or ~/.bash_profile for older macOS
+
+# Install Claude Conversation Extractor
+pipx install claude-conversation-extractor
+
+# Now you can export Claude Code logs:
+claude-extract
+```
+
+#### Method 2: Using pip with venv (Alternative Claude Export Method)
+
+```bash
+# Create virtual environment for Claude export tool
+python3 -m venv claude-export-env
+source claude-export-env/bin/activate
+
+# Install the Claude Code export tool
+pip install claude-conversation-extractor
+
+# Create alias to export Claude conversations easily
+echo 'alias claude-extract="source ~/claude-export-env/bin/activate && claude-extract"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+#### Common macOS Issues When Exporting Claude Code
+
+**"command not found" after installing Claude extractor**
+```bash
+# Add ~/.local/bin to PATH for Claude export commands
+echo $PATH | grep -q ~/.local/bin || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**"externally managed environment" error (macOS 13+)**
+- This is why pipx is recommended for Claude Code export
+- Alternative: `pip install --user --break-system-packages claude-conversation-extractor`
+
+### Export Claude Code on Windows
+
+#### Method 1: Using pipx (Best for Exporting Claude Conversations)
+
+```batch
+REM Install pipx for Claude export tool
+py -m pip install --user pipx
+py -m pipx ensurepath
+
+REM Restart Command Prompt or PowerShell
+
+REM Install Claude Conversation Extractor
+pipx install claude-conversation-extractor
+
+REM Export Claude Code conversations:
+claude-logs
+```
+
+#### Method 2: PowerShell Installation for Claude Export
+
+```powershell
+# If execution policy blocks Claude export tool:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# Install pipx for Claude Code export
+python -m pip install --user pipx
+python -m pipx ensurepath
+
+# Restart PowerShell
+
+# Install tool to export Claude conversations
+pipx install claude-conversation-extractor
+```
+
+#### Common Windows Issues Exporting Claude Code
+
+**"'claude-extract' is not recognized" when trying to export Claude conversations**
+1. Add Python Scripts to PATH:
+   ```batch
+   REM Replace YourUsername with actual username
+   setx PATH "%PATH%;C:\Users\YourUsername\AppData\Local\Programs\Python\Python311\Scripts"
+   ```
+2. Restart Command Prompt
+3. Try `claude-extract` again to export Claude Code logs
+
+**"Access denied" when installing Claude export tool**
+- Run as Administrator
+- Or use: `pip install --user claude-conversation-extractor`
+
+### Export Claude Code on Linux
+
+#### Ubuntu/Debian - Install Claude Conversation Extractor
+
+```bash
+# Install pipx for Claude export tool
+sudo apt update
+sudo apt install pipx
+pipx ensurepath
+
+# Restart terminal or run:
+source ~/.bashrc
+
+# Install tool to export Claude Code conversations
+pipx install claude-conversation-extractor
+
+# Export Claude logs:
+claude-extract
+```
+
+#### Fedora/RHEL - Extract Claude Conversations
+
+```bash
+# Install pipx for Claude Code export
+sudo dnf install pipx
+
+# Install Claude Conversation Extractor
+pipx install claude-conversation-extractor
+```
+
+#### Arch Linux - Backup Claude Code Logs
+
+```bash
+# Install pipx for Claude export functionality
+sudo pacman -S python-pipx
+
+# Install tool to extract Claude sessions
+pipx install claude-conversation-extractor
+```
+
+#### Common Linux Issues When Exporting Claude Code
+
+**"externally managed environment" (Ubuntu 23.04+, Fedora 38+)**
+```bash
+# Use pipx to export Claude conversations (recommended)
+# Or create virtual environment:
+python3 -m venv ~/claude-export-venv
+source ~/claude-export-venv/bin/activate
+pip install claude-conversation-extractor
+```
+
+**"Permission denied" accessing Claude Code logs in ~/.claude/projects**
+```bash
+# Check Claude Code logs permissions
+ls -la ~/.claude/projects/
+
+# Fix permissions to export Claude conversations
+chmod -R u+r ~/.claude/projects/
+```
+
+## Troubleshooting Claude Export Issues
+
+### Can't Find Claude Code Conversations?
+
+**Check if Claude Code logs exist:**
+```bash
+# macOS/Linux
+ls -la ~/.claude/projects/
+
+# Windows
+dir %USERPROFILE%\.claude\projects\
+```
+
+**No ~/.claude/projects folder?**
+- You must use Claude Code at least once before exporting
+- The folder contains JSONL files with your conversations
+
+### "No module named 'claude_conversation_extractor'"
+
+The Claude export tool uses commands, not Python imports:
+```bash
+claude-extract           # Main command to export Claude conversations
+claude-extract --help    # Show all export options
+claude-extract --list    # List all Claude Code conversations
+```
+
+### Python Version Issues for Claude Export
+
+**Check Python version:**
+```bash
+python3 --version  # Needs 3.8+ to export Claude Code logs
+```
+
+**Install newer Python:**
+- macOS: `brew install python@3.11`
+- Windows: Download from [python.org](https://python.org)
+- Linux: Use package manager or pyenv
+
+### Claude Export Command Not Found After Installation
+
+**Verify Claude Conversation Extractor installation:**
+```bash
+# With pipx
+pipx list | grep claude
+
+# With pip
+pip show claude-conversation-extractor
+```
+
+**Add to PATH manually for Claude export:**
+- macOS/Linux: Add `~/.local/bin` to PATH
+- Windows: Add `%APPDATA%\Python\Scripts` to PATH
+
+## Alternative Methods to Export Claude Conversations
+
+### Install from Source (Claude Code Export Development)
+
+```bash
+# Clone Claude Conversation Extractor repository
+git clone https://github.com/ZeroSumQuant/claude-conversation-extractor.git
+cd claude-conversation-extractor
+
+# Install Claude export tool in development mode
+pip install -e .
+```
+
+### Using UV (Fast Claude Export Installation)
+
+```bash
+# Install uv package manager
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install Claude Conversation Extractor
+uv pip install claude-conversation-extractor
+```
+
+### Manual Python Script to Export Claude Code
+
+If installation fails, run the extractor directly:
+```bash
+# Download the Claude export script
+curl -O https://raw.githubusercontent.com/ZeroSumQuant/claude-conversation-extractor/main/extract_claude_logs.py
+
+# Run to export Claude conversations
+python3 extract_claude_logs.py
+```
+
+## Verify Claude Conversation Extractor Installation
+
+After installing the Claude Code export tool:
+
+```bash
+# Check if Claude export command exists
+which claude-extract  # macOS/Linux
+where claude-extract  # Windows
+
+# Test Claude Conversation Extractor
+claude-extract --version
+claude-extract --help
+
+# List your Claude Code conversations
+claude-extract --list
+
+# Export recent Claude sessions
+claude-extract --recent 5
+```
+
+If you see your Claude conversations listed, the export tool is working!
+
+## Still Can't Export Claude Code Conversations?
+
+1. **Check Claude Code is installed**: The tool exports from ~/.claude/projects
+2. **Verify Python 3.8+**: Run `python3 --version`
+3. **Try pipx**: Solves most installation issues
+4. **Report issues**: https://github.com/ZeroSumQuant/claude-conversation-extractor/issues
+
+Include these details when reporting Claude export problems:
+- Operating system
+- Python version
+- Error message
+- Installation method used
+- Output of `ls ~/.claude/projects/` (or Windows equivalent)
+
+## Quick Reference - Claude Export Commands
+
+After installation, these commands export Claude Code conversations:
+- `claude-extract` - Interactive UI to export Claude conversations (recommended)
+- `claude-search` - Real-time search across all Claude conversations
+- `claude-extract --all` - Export all Claude Code conversations at once
+- `claude-extract --recent 10` - Export last 10 Claude sessions
+- `claude-start` - Alias for claude-extract (same functionality)
+
+---
+
+**Keywords**: install claude conversation extractor, export claude code conversations, claude code export tool, extract claude logs, backup claude sessions, claude jsonl to markdown, ~/.claude/projects export, pip install claude-conversation-extractor
+
+Remember: pipx is the best way to install the Claude Code export tool. It handles everything automatically and works on all platforms where Claude Code runs.
+</file>
+
+<file path="requirements/base.txt">
+# No external dependencies required!
+# This tool uses only Python standard library modules.
+# Python 3.8+ is required.
+</file>
+
+<file path="requirements/dev.txt">
+# Development dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0
+black>=23.0.0
+flake8>=6.0.0
+bandit>=1.7.0
+</file>
+
+<file path="requirements/optional.txt">
+# Optional dependencies for enhanced search functionality
+# Install with: pip install -r requirements-optional.txt
+
+# NLP support for semantic search
+spacy>=3.0.0
+# Download the English model after installing spacy:
+# python -m spacy download en_core_web_sm
+</file>
+
+<file path="scripts/run_tests.py">
+#!/usr/bin/env python3
+"""
+Test runner with coverage reporting
+"""
+
+import subprocess
+import sys
+
+
+def main():
+    """Run tests with coverage"""
+
+    print("🧪 Running Claude Conversation Extractor Tests\n")
+
+    # Test suites to run
+    test_suites = [
+        ("Core Extractor Tests", "tests/test_extractor.py"),
+        ("Search Unit Tests", "tests/test_search.py"),
+        ("Search Integration Tests", "tests/test_search_integration.py"),
+        ("Interactive UI Tests", "tests/test_interactive_ui.py"),
+        ("Real-time Search Unit Tests", "tests/test_realtime_search_unit.py"),
+    ]
+
+    # Run each test suite
+    for name, test_file in test_suites:
+        print(f"\n{'=' * 60}")
+        print(f"Running: {name}")
+        print(f"{'=' * 60}")
+
+        cmd = [sys.executable, "-m", "pytest", test_file, "-v", "--tb=short"]
+
+        result = subprocess.run(cmd)
+
+        if result.returncode != 0:
+            print(f"\n❌ {name} failed!")
+        else:
+            print(f"\n✅ {name} passed!")
+
+    # Run coverage report
+    print(f"\n{'=' * 60}")
+    print("📊 Coverage Report")
+    print(f"{'=' * 60}\n")
+
+    coverage_cmd = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "--cov=extract_claude_logs",
+        "--cov=search_conversations",
+        "--cov=interactive_ui",
+        "--cov=realtime_search",
+        "--cov-report=term-missing",
+        "--cov-report=html",
+        "-q",
+    ]
+
+    subprocess.run(coverage_cmd)
+
+    print("\n📁 HTML coverage report saved to: htmlcov/index.html")
+    print("\nTo view the report, run:")
+    print("    open htmlcov/index.html  # macOS")
+    print("    xdg-open htmlcov/index.html  # Linux")
+    print("    start htmlcov/index.html  # Windows")
+
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="src/__init__.py">
+"""Claude Conversation Extractor - Extract Claude Code conversations to various formats."""
+
+__version__ = "1.1.1"
+__author__ = "Dustin Kirby"
+
+from .extract_claude_logs import ClaudeConversationExtractor
+from .search_conversations import ConversationSearcher
+
+__all__ = ["ClaudeConversationExtractor", "ConversationSearcher"]
+</file>
+
+<file path="src/interactive_ui.py">
+#!/usr/bin/env python3
+"""Interactive terminal UI for Claude Conversation Extractor"""
+
+import os
+import platform
+import shutil
+import subprocess
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional
+
+# Handle both package and direct execution imports
+try:
+    from .extract_claude_logs import ClaudeConversationExtractor
+    from .realtime_search import RealTimeSearch, create_smart_searcher
+    from .search_conversations import ConversationSearcher
+except ImportError:
+    # Fallback for direct execution or when not installed as package
+    from extract_claude_logs import ClaudeConversationExtractor
+    from realtime_search import RealTimeSearch, create_smart_searcher
+    from search_conversations import ConversationSearcher
+
+
+class InteractiveUI:
+    """Interactive terminal UI for easier conversation extraction"""
+
+    def __init__(self, output_dir: Optional[str] = None):
+        self.output_dir = output_dir
+        self.extractor = ClaudeConversationExtractor(output_dir)
+        self.searcher = ConversationSearcher()
+        self.sessions: List[Path] = []
+        self.terminal_width = shutil.get_terminal_size().columns
+
+    def clear_screen(self):
+        """Clear the terminal screen"""
+        # Use ANSI escape codes for cross-platform compatibility
+        print("\033[2J\033[H", end="")
+
+    def print_banner(self):
+        """Print a cool ASCII banner"""
+        # Bright magenta color
+        MAGENTA = "\033[95m"
+        RESET = "\033[0m"
+        BOLD = "\033[1m"
+
+        banner = f"""{MAGENTA}{BOLD}
+
+ ██████╗██╗      █████╗ ██╗   ██╗██████╗ ███████╗
+██╔════╝██║     ██╔══██╗██║   ██║██╔══██╗██╔════╝
+██║     ██║     ███████║██║   ██║██║  ██║█████╗
+██║     ██║     ██╔══██║██║   ██║██║  ██║██╔══╝
+╚██████╗███████╗██║  ██║╚██████╔╝██████╔╝███████╗
+ ╚═════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚══════╝
+███████╗██╗  ██╗████████╗██████╗  █████╗  ██████╗████████╗
+██╔════╝╚██╗██╔╝╚══██╔══╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝
+█████╗   ╚███╔╝    ██║   ██████╔╝███████║██║        ██║
+██╔══╝   ██╔██╗    ██║   ██╔══██╗██╔══██║██║        ██║
+███████╗██╔╝ ██╗   ██║   ██║  ██║██║  ██║╚██████╗   ██║
+╚══════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝   ╚═╝
+
+{RESET}"""
+        print(banner)
+
+    def print_centered(self, text: str, char: str = "="):
+        """Print text centered with decorative characters"""
+        padding = (self.terminal_width - len(text) - 2) // 2
+        print(f"{char * padding} {text} {char * padding}")
+
+    def get_folder_selection(self) -> Optional[Path]:
+        """Simple folder selection dialog"""
+        self.clear_screen()
+        self.print_banner()
+        print("\n📁 Where would you like to save your conversations?\n")
+
+        # Suggest common locations
+        home = Path.home()
+        suggestions = [
+            home / "Desktop" / "Claude Conversations",
+            home / "Documents" / "Claude Conversations",
+            home / "Downloads" / "Claude Conversations",
+            Path.cwd() / "Claude Conversations",
+        ]
+
+        print("Suggested locations:")
+        for i, path in enumerate(suggestions, 1):
+            print(f"  {i}. {path}")
+
+        print("\n  C. Custom location")
+        print("  Q. Quit")
+
+        while True:
+            choice = input("\nSelect an option (1-4, C, or Q): ").strip().upper()
+
+            if choice == "Q":
+                return None
+            elif choice == "C":
+                custom_path = input("\nEnter custom path: ").strip()
+                if custom_path:
+                    return Path(custom_path).expanduser()
+            elif choice.isdigit() and 1 <= int(choice) <= len(suggestions):
+                return suggestions[int(choice) - 1]
+            else:
+                print("❌ Invalid choice. Please try again.")
+
+    def show_sessions_menu(self) -> List[int]:
+        """Display sessions and let user select which to extract"""
+        self.clear_screen()
+        self.print_banner()
+
+        # Get all sessions
+        print("\n🔍 Finding your Claude conversations...")
+        self.sessions = self.extractor.find_sessions()
+
+        if not self.sessions:
+            print("\n❌ No Claude conversations found!")
+            print("Make sure you've used Claude Code at least once.")
+            input("\nPress Enter to exit...")
+            return []
+
+        print(f"\n✅ Found {len(self.sessions)} conversations!\n")
+
+        # Display sessions
+        for i, session_path in enumerate(self.sessions[:20], 1):  # Show max 20
+            project = session_path.parent.name
+            modified = datetime.fromtimestamp(session_path.stat().st_mtime)
+            size_kb = session_path.stat().st_size / 1024
+
+            date_str = modified.strftime("%Y-%m-%d %H:%M")
+            print(f"  {i:2d}. [{date_str}] {project[:30]:<30} ({size_kb:.1f} KB)")
+
+        if len(self.sessions) > 20:
+            print(f"\n  ... and {len(self.sessions) - 20} more conversations")
+
+        print("\n" + "=" * 60)
+        print("\nOptions:")
+        print("  A. Extract ALL conversations")
+        print("  R. Extract 5 most RECENT")
+        print("  S. SELECT specific conversations (e.g., 1,3,5)")
+        print("  F. SEARCH conversations (real-time search)")
+        print("  Q. QUIT")
+
+        while True:
+            choice = input("\nYour choice: ").strip().upper()
+
+            if choice == "Q":
+                return []
+            elif choice == "A":
+                return list(range(len(self.sessions)))
+            elif choice == "R":
+                return list(range(min(5, len(self.sessions))))
+            elif choice == "S":
+                selection = input("Enter conversation numbers (e.g., 1,3,5): ").strip()
+                try:
+                    indices = [int(x.strip()) - 1 for x in selection.split(",")]
+                    # Validate indices
+                    if all(0 <= i < len(self.sessions) for i in indices):
+                        return indices
+                    else:
+                        print("❌ Invalid selection. Please use valid numbers.")
+                except ValueError:
+                    print("❌ Invalid format. Use comma-separated numbers.")
+            elif choice == "F":
+                # Search functionality
+                search_results = self.search_conversations()
+                if search_results:
+                    return search_results
+            else:
+                print("❌ Invalid choice. Please try again.")
+
+    def show_progress(self, current: int, total: int, message: str = ""):
+        """Display a simple progress bar"""
+        bar_width = 40
+        progress = current / total if total > 0 else 0
+        filled = int(bar_width * progress)
+        bar = "█" * filled + "░" * (bar_width - filled)
+
+        print(f"\r[{bar}] {current}/{total} {message}", end="", flush=True)
+
+    def search_conversations(self) -> List[int]:
+        """Launch real-time search interface"""
+        # Enhance searcher with smart search
+        smart_searcher = create_smart_searcher(self.searcher)
+
+        # Create and run real-time search
+        rts = RealTimeSearch(smart_searcher, self.extractor)
+        selected_file = rts.run()
+
+        if selected_file:
+            # View the selected conversation
+            self.extractor.display_conversation(Path(selected_file))
+            
+            # Ask if user wants to extract it
+            extract_choice = input("\n📤 Extract this conversation? (y/N): ").strip().lower()
+            if extract_choice == 'y':
+                try:
+                    index = self.sessions.index(Path(selected_file))
+                    return [index]
+                except ValueError:
+                    print("\n❌ Error: Selected file not found in sessions list")
+                    input("\nPress Enter to continue...")
+            
+            # Return empty to go back to menu
+            return []
+
+        return []
+
+    def extract_conversations(self, indices: List[int], output_dir: Path) -> int:
+        """Extract selected conversations with progress display"""
+        print(f"\n📤 Extracting {len(indices)} conversations...\n")
+
+        # Update the extractor's output directory
+        self.extractor.output_dir = output_dir
+
+        # Use the extractor's method
+        success_count, total_count = self.extractor.extract_multiple(
+            self.sessions, indices
+        )
+
+        print(
+            f"\n\n✅ Successfully extracted {success_count}/{total_count} conversations!"
+        )
+        return success_count
+
+    def open_folder(self, path: Path):
+        """Open the output folder in the system file explorer"""
+        try:
+            if platform.system() == "Windows":
+                os.startfile(str(path))
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.run(["open", str(path)])
+            else:  # Linux
+                subprocess.run(["xdg-open", str(path)])
+        except Exception:
+            pass  # Silently fail if we can't open the folder
+
+    def run(self):
+        """Main interactive UI flow"""
+        try:
+            # Get output folder
+            output_dir = self.get_folder_selection()
+            if not output_dir:
+                print("\n👋 Goodbye!")
+                return
+
+            # Get session selection
+            selected_indices = self.show_sessions_menu()
+            if not selected_indices:
+                print("\n👋 Goodbye!")
+                return
+
+            # Create output directory if needed
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            # Extract conversations
+            success_count = self.extract_conversations(selected_indices, output_dir)
+
+            if success_count > 0:
+                print(f"\n📁 Files saved to: {output_dir}")
+
+                # Offer to open the folder
+                open_choice = input("\n🗂️  Open output folder? (Y/n): ").strip().lower()
+                if open_choice != "n":
+                    self.open_folder(output_dir)
+
+            else:
+                print("\n❌ No conversations were extracted.")
+
+            input("\n✨ Press Enter to exit...")
+
+        except KeyboardInterrupt:
+            print("\n\n👋 Goodbye!")
+        except Exception as e:
+            print(f"\n❌ Error: {e}")
+            input("\nPress Enter to exit...")
+
+
+def main():
+    """Entry point for interactive UI"""
+    ui = InteractiveUI()
+    ui.run()
+
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="src/realtime_search.py">
+#!/usr/bin/env python3
+"""
+Fixed real-time search interface for Claude Conversation Extractor.
+Properly handles arrow keys without printing escape sequences.
+"""
+
+import os
+import sys
+import threading
+import time
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional
+
+# Platform-specific imports for keyboard handling
+if sys.platform == "win32":
+    import msvcrt
+else:
+    import select
+    import termios
+    import tty
+
+
+@dataclass
+class SearchState:
+    """Maintains the current state of the search interface"""
+
+    query: str = ""
+    cursor_pos: int = 0
+    results: List = None
+    selected_index: int = 0
+    last_update: float = 0
+    is_searching: bool = False
+
+    def __post_init__(self):
+        if self.results is None:
+            self.results = []
+
+
+class KeyboardHandler:
+    """Cross-platform keyboard input handler with fixed arrow key support"""
+
+    def __init__(self):
+        self.old_settings = None
+        if sys.platform != "win32":
+            self.stdin_fd = sys.stdin.fileno()
+
+    def __enter__(self):
+        """Set up raw input mode"""
+        if sys.platform != "win32":
+            self.old_settings = termios.tcgetattr(self.stdin_fd)
+            tty.setraw(self.stdin_fd)
+        return self
+
+    def __exit__(self, *args):
+        """Restore terminal settings"""
+        if sys.platform != "win32" and self.old_settings:
+            termios.tcsetattr(self.stdin_fd, termios.TCSADRAIN, self.old_settings)
+
+    def get_key(self, timeout: float = 0.1) -> Optional[str]:
+        """Get a single keypress with timeout - FIXED version"""
+        if sys.platform == "win32":
+            # Windows implementation
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                if msvcrt.kbhit():
+                    key = msvcrt.getch()
+                    # Handle special keys
+                    if key in (b"\x00", b"\xe0"):  # Special key prefix
+                        key = msvcrt.getch()
+                        if key == b"H":  # Up arrow
+                            return "UP"
+                        elif key == b"P":  # Down arrow
+                            return "DOWN"
+                        elif key == b"K":  # Left arrow
+                            return "LEFT"
+                        elif key == b"M":  # Right arrow
+                            return "RIGHT"
+                    elif key == b"\x1b":  # ESC
+                        return "ESC"
+                    elif key == b"\r":  # Enter
+                        return "ENTER"
+                    elif key == b"\x08":  # Backspace
+                        return "BACKSPACE"
+                    else:
+                        try:
+                            return key.decode("utf-8")
+                        except UnicodeDecodeError:
+                            return None
+                time.sleep(0.01)
+            return None
+        else:
+            # Unix/Linux/macOS implementation - FIXED
+            if select.select([sys.stdin], [], [], timeout)[0]:
+                # Read one character
+                char = sys.stdin.read(1)
+                
+                # Check for escape sequences
+                if char == '\x1b':  # ESC character
+                    # Check if there are more characters (arrow key sequence)
+                    if select.select([sys.stdin], [], [], 0.0)[0]:
+                        # Read the rest of the escape sequence
+                        seq = []
+                        seq.append(sys.stdin.read(1))  # Should be '['
+                        
+                        # Read the next character
+                        if select.select([sys.stdin], [], [], 0.0)[0]:
+                            seq.append(sys.stdin.read(1))
+                            
+                            # Check for arrow keys
+                            if seq == ['[', 'A']:
+                                return "UP"
+                            elif seq == ['[', 'B']:
+                                return "DOWN"
+                            elif seq == ['[', 'C']:
+                                return "RIGHT"
+                            elif seq == ['[', 'D']:
+                                return "LEFT"
+                            else:
+                                # Unknown escape sequence - consume any remaining chars
+                                while select.select([sys.stdin], [], [], 0.0)[0]:
+                                    sys.stdin.read(1)
+                                return None
+                        return None
+                    else:
+                        # Just ESC by itself
+                        return "ESC"
+                        
+                elif char == '\r' or char == '\n':
+                    return "ENTER"
+                elif char == '\x7f' or char == '\x08':
+                    return "BACKSPACE"
+                elif char == '\x03':  # Ctrl+C
+                    raise KeyboardInterrupt
+                elif ord(char) >= 32 and ord(char) < 127:  # Printable characters
+                    return char
+                else:
+                    return None
+            return None
+
+
+class TerminalDisplay:
+    """Manages terminal display for real-time search"""
+
+    def __init__(self):
+        self.last_result_count = 0
+        self.header_lines = 4  # Lines used by header
+
+    def clear_screen(self):
+        """Clear the terminal screen"""
+        if sys.platform == "win32":
+            os.system("cls")
+        else:
+            print("\033[2J\033[H", end="")
+
+    def move_cursor(self, row: int, col: int):
+        """Move cursor to specific position"""
+        print(f"\033[{row};{col}H", end="", flush=True)
+
+    def clear_line(self):
+        """Clear current line"""
+        print("\033[2K", end="", flush=True)
+
+    def save_cursor(self):
+        """Save current cursor position"""
+        print("\033[s", end="", flush=True)
+
+    def restore_cursor(self):
+        """Restore saved cursor position"""
+        print("\033[u", end="", flush=True)
+
+    def draw_header(self):
+        """Draw the search interface header"""
+        self.move_cursor(1, 1)
+        print("🔍 REAL-TIME SEARCH")
+        print("=" * 60)
+        print("Type to search • ↑↓ to select • Enter to open • ESC to exit")
+        print("─" * 60)
+
+    def draw_results(self, results: List, selected_index: int, query: str):
+        """Draw search results with highlighting"""
+        # Clear previous results
+        for i in range(self.last_result_count + 1):
+            self.move_cursor(self.header_lines + i + 1, 1)
+            self.clear_line()
+
+        if not results:
+            self.move_cursor(self.header_lines + 1, 1)
+            if query:
+                print(f"No results found for '{query}'")
+            else:
+                print("Start typing to search...")
+        else:
+            # Display results
+            for i, result in enumerate(results[:10]):  # Show max 10 results
+                self.move_cursor(self.header_lines + i + 1, 1)
+
+                # Format result display
+                if i == selected_index:
+                    print("▸ ", end="")  # Selection indicator
+                else:
+                    print("  ", end="")
+
+                # Show result info
+                date_str = result.timestamp.strftime("%Y-%m-%d")
+                project = Path(result.file_path).parent.name[:20]
+
+                # Highlight matching text
+                preview = result.context[:60].replace("\n", " ")
+                if query.lower() in preview.lower():
+                    # Simple highlighting - could be improved
+                    idx = preview.lower().find(query.lower())
+                    preview = (
+                        preview[:idx]
+                        + f"\033[93m{preview[idx:idx + len(query)]}\033[0m"
+                        + preview[idx + len(query) :]
+                    )
+
+                print(f"📄 {date_str} | {project} | {preview}...")
+
+        self.last_result_count = len(results[:10])
+
+    def draw_search_box(self, query: str, cursor_pos: int):
+        """Draw the search input box"""
+        # Position at bottom of results
+        row = self.header_lines + self.last_result_count + 3
+        self.move_cursor(row, 1)
+        self.clear_line()
+        print("─" * 60)
+
+        self.move_cursor(row + 1, 1)
+        self.clear_line()
+        print(f"Search: {query}", end="")
+
+        # Position cursor
+        self.move_cursor(row + 1, 9 + cursor_pos)
+        sys.stdout.flush()
+
+
+class RealTimeSearch:
+    """Main real-time search interface with fixed arrow key handling"""
+
+    def __init__(self, searcher, extractor):
+        self.searcher = searcher
+        self.extractor = extractor
+        self.display = TerminalDisplay()
+        self.state = SearchState()
+        self.search_thread = None
+        self.search_lock = threading.Lock()
+        self.results_cache = {}
+        self.debounce_delay = 0.3  # 300ms debounce
+        self.stop_event = threading.Event()  # For clean thread shutdown
+
+    def _process_search_request(self):
+        """Process a single search request (extracted for testing)"""
+        with self.search_lock:
+            if not self.state.is_searching:
+                return False
+
+            # Check debounce
+            if time.time() - self.state.last_update < self.debounce_delay:
+                return False
+
+            query = self.state.query
+            self.state.is_searching = False
+
+        if not query:
+            with self.search_lock:
+                self.state.results = []
+            return True
+
+        # Check cache
+        if query in self.results_cache:
+            with self.search_lock:
+                self.state.results = self.results_cache[query]
+            return True
+
+        # Perform search
+        try:
+            # Allow search_dir to be set on instance for testing
+            search_kwargs = {
+                "query": query,
+                "mode": "smart",
+                "max_results": 20,
+                "case_sensitive": False,
+            }
+            if hasattr(self, "search_dir") and self.search_dir:
+                search_kwargs["search_dir"] = self.search_dir
+
+            results = self.searcher.search(**search_kwargs)
+
+            # Cache results
+            self.results_cache[query] = results
+
+            with self.search_lock:
+                self.state.results = results
+                self.state.selected_index = 0
+        except Exception:
+            # Handle search errors gracefully
+            with self.search_lock:
+                self.state.results = []
+
+        return True
+
+    def search_worker(self):
+        """Background thread for searching"""
+        while not self.stop_event.is_set():
+            # Wait for search request
+            time.sleep(0.05)
+            self._process_search_request()
+
+        # Thread cleanup
+        self.stop_event.clear()
+
+    def handle_input(self, key: str) -> Optional[str]:
+        """Handle keyboard input and return action if needed"""
+        if not key:
+            return None
+            
+        if key == "ESC":
+            return "exit"
+
+        elif key == "ENTER":
+            if self.state.results and 0 <= self.state.selected_index < len(
+                self.state.results
+            ):
+                return "select"
+
+        elif key == "UP":
+            if self.state.results:
+                self.state.selected_index = max(0, self.state.selected_index - 1)
+                return "redraw"  # Signal to redraw
+
+        elif key == "DOWN":
+            if self.state.results:
+                self.state.selected_index = min(
+                    len(self.state.results[:10]) - 1, self.state.selected_index + 1
+                )
+                return "redraw"  # Signal to redraw
+
+        elif key == "LEFT":
+            self.state.cursor_pos = max(0, self.state.cursor_pos - 1)
+            return "redraw"
+
+        elif key == "RIGHT":
+            self.state.cursor_pos = min(
+                len(self.state.query), self.state.cursor_pos + 1
+            )
+            return "redraw"
+
+        elif key == "BACKSPACE":
+            if self.state.cursor_pos > 0:
+                self.state.query = (
+                    self.state.query[: self.state.cursor_pos - 1]
+                    + self.state.query[self.state.cursor_pos :]
+                )
+                self.state.cursor_pos -= 1
+                self.trigger_search()
+                return "redraw"
+
+        elif key and len(key) == 1 and ord(key) >= 32 and ord(key) < 127:  # Printable character
+            self.state.query = (
+                self.state.query[: self.state.cursor_pos]
+                + key
+                + self.state.query[self.state.cursor_pos :]
+            )
+            self.state.cursor_pos += 1
+            self.trigger_search()
+            return "redraw"
+
+        return None
+
+    def trigger_search(self):
+        """Trigger a new search with debouncing"""
+        with self.search_lock:
+            self.state.last_update = time.time()
+            self.state.is_searching = True
+            # Clear cache for partial matches
+            keys_to_remove = [
+                k
+                for k in self.results_cache.keys()
+                if not k.startswith(self.state.query)
+            ]
+            for k in keys_to_remove:
+                del self.results_cache[k]
+
+    def stop(self):
+        """Stop the search worker thread cleanly"""
+        if self.search_thread and self.search_thread.is_alive():
+            self.stop_event.set()
+            self.search_thread.join(timeout=0.5)
+
+    def run(self) -> Optional[Path]:
+        """Run the real-time search interface"""
+        # Start search worker thread
+        self.search_thread = threading.Thread(target=self.search_worker, daemon=True)
+        self.search_thread.start()
+
+        try:
+            self.display.clear_screen()
+            self.display.draw_header()
+
+            with KeyboardHandler() as keyboard:
+                # Initial draw
+                self.display.draw_results(
+                    self.state.results[:10],
+                    self.state.selected_index,
+                    self.state.query,
+                )
+                self.display.draw_search_box(
+                    self.state.query, self.state.cursor_pos
+                )
+                
+                while True:
+                    # Get keyboard input
+                    key = keyboard.get_key(timeout=0.1)
+                    
+                    if key:
+                        action = self.handle_input(key)
+
+                        if action == "exit":
+                            return None
+                        elif action == "select":
+                            selected_result = self.state.results[
+                                self.state.selected_index
+                            ]
+                            return selected_result.file_path
+                        elif action == "redraw" or action is None:
+                            # Redraw the interface
+                            self.display.draw_results(
+                                self.state.results[:10],
+                                self.state.selected_index,
+                                self.state.query,
+                            )
+                            self.display.draw_search_box(
+                                self.state.query, self.state.cursor_pos
+                            )
+                    else:
+                        # Check if results have changed (from search thread)
+                        # and redraw if needed
+                        pass
+
+        except KeyboardInterrupt:
+            return None
+        finally:
+            # Clean up
+            self.stop()  # Stop the search thread
+            self.display.clear_screen()
+
+
+def create_smart_searcher(searcher):
+    """Enhance the searcher with smart search capabilities"""
+    original_search = searcher.search
+
+    def smart_search(query: str, **kwargs):
+        """Smart search that automatically uses the best search mode"""
+        # Remove mode parameter if provided
+        kwargs.pop("mode", None)
+
+        # Try different search strategies
+        results = []
+
+        # 1. First try exact match (fast)
+        exact_results = original_search(query, mode="exact", **kwargs)
+        results.extend(exact_results)
+
+        # 2. If query looks like regex, try regex search
+        if any(c in query for c in r".*+?[]{}()^$|\\"):
+            try:
+                regex_results = original_search(query, mode="regex", **kwargs)
+                # Add results not already found
+                existing_paths = {r.file_path for r in results}
+                for r in regex_results:
+                    if r.file_path not in existing_paths:
+                        results.append(r)
+            except Exception:
+                pass  # Invalid regex, skip
+
+        # 3. Smart search for partial matches
+        smart_results = original_search(query, mode="smart", **kwargs)
+        existing_paths = {r.file_path for r in results}
+        for r in smart_results:
+            if r.file_path not in existing_paths:
+                results.append(r)
+
+        # 4. If semantic search is available, use it for better matches
+        if hasattr(searcher, "nlp") and searcher.nlp:
+            try:
+                semantic_results = original_search(query, mode="semantic", **kwargs)
+                existing_paths = {r.file_path for r in results}
+                for r in semantic_results:
+                    if r.file_path not in existing_paths:
+                        results.append(r)
+            except Exception:
+                pass  # Semantic search failed
+
+        # Sort by relevance (timestamp for now, could be improved)
+        try:
+            results.sort(
+                key=lambda x: x.timestamp if x.timestamp else datetime.min, reverse=True
+            )
+        except (AttributeError, TypeError):
+            # If timestamp comparison fails, sort by relevance score
+            try:
+                results.sort(
+                    key=lambda x: getattr(x, "relevance_score", 0), reverse=True
+                )
+            except Exception:
+                pass  # Keep original order if sorting fails
+
+        # Limit results
+        max_results = kwargs.get("max_results", 20)
+        return results[:max_results]
+
+    # Replace the search method
+    searcher.search = smart_search
+    return searcher
+
+
+def main():
+    """Main entry point for running real-time search directly."""
+    from extract_claude_logs import ClaudeConversationExtractor
+    from search_conversations import ConversationSearcher
+    
+    # Initialize components
+    extractor = ClaudeConversationExtractor()
+    searcher = ConversationSearcher()
+    smart_searcher = create_smart_searcher(searcher)
+    
+    # Create and run real-time search
+    rts = RealTimeSearch(smart_searcher, extractor)
+    selected_file = rts.run()
+    
+    if selected_file:
+        print(f"\n✅ Selected: {selected_file}")
+        # Could optionally extract here
+    else:
+        print("\n👋 Search cancelled")
+
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="src/search_cli.py">
+#!/usr/bin/env python3
+"""
+Simple CLI search for Claude conversations without terminal control.
+This is used when running `claude-search` from the command line.
+"""
+
+import sys
+
+# Handle both package and direct execution imports
+try:
+    from .search_conversations import ConversationSearcher
+    from .realtime_search import create_smart_searcher
+    from .extract_claude_logs import ClaudeConversationExtractor
+except ImportError:
+    # Fallback for direct execution or when not installed as package
+    from search_conversations import ConversationSearcher
+    from realtime_search import create_smart_searcher
+    from extract_claude_logs import ClaudeConversationExtractor
+
+
+def main():
+    """Main entry point for CLI search."""
+    # Get search term from stdin or arguments
+    if len(sys.argv) > 1:
+        # Search term provided as argument
+        search_term = " ".join(sys.argv[1:])
+    else:
+        # Prompt for search term
+        try:
+            search_term = input("🔍 Enter search term: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\n👋 Search cancelled")
+            return
+    
+    if not search_term:
+        print("❌ No search term provided")
+        return
+    
+    print(f"\n🔍 Searching for: '{search_term}'")
+    print("=" * 60)
+    
+    # Initialize searcher
+    searcher = ConversationSearcher()
+    smart_searcher = create_smart_searcher(searcher)
+    
+    # Perform search
+    results = smart_searcher.search(search_term, max_results=20)
+    
+    if results:
+        print(f"\n✅ Found {len(results)} results across conversations:\n")
+        
+        # Group by file
+        by_file = {}
+        for result in results:
+            fname = result.file_path.name
+            if fname not in by_file:
+                by_file[fname] = []
+            by_file[fname].append(result)
+        
+        # Display results
+        sessions = []
+        session_paths = []
+        extractor = ClaudeConversationExtractor()
+        all_sessions = extractor.find_sessions()
+        
+        for i, (fname, file_results) in enumerate(by_file.items(), 1):
+            session_id = fname.replace('.jsonl', '')
+            sessions.append((fname, session_id))
+            
+            # Find the actual file path
+            for session_path in all_sessions:
+                if session_path.name == fname:
+                    session_paths.append(session_path)
+                    break
+            
+            print(f"{i}. Session {session_id[:8]}... ({len(file_results)} matches)")
+            
+            # Show first match preview
+            first = file_results[0]
+            preview = first.matched_content[:150].replace('\n', ' ')
+            print(f"   {first.speaker}: {preview}...")
+            print()
+        
+        # Offer to view or extract conversations
+        if session_paths:
+            print("\n" + "=" * 60)
+            print("Options:")
+            print("  V. VIEW a conversation")
+            print("  E. EXTRACT all conversations")
+            print("  Q. QUIT")
+            
+            try:
+                choice = input("\nYour choice: ").strip().upper()
+                
+                if choice == 'V':
+                    # View conversation
+                    if len(session_paths) == 1:
+                        # Only one result, view it directly
+                        extractor.display_conversation(session_paths[0])
+                        
+                        # After viewing, offer to extract
+                        extract_choice = input("\n📤 Extract this conversation? (y/N): ").strip().lower()
+                        if extract_choice == 'y':
+                            conversation = extractor.extract_conversation(session_paths[0])
+                            if conversation:
+                                output = extractor.save_as_markdown(conversation, sessions[0][1])
+                                print(f"✅ Saved: {output.name}")
+                    else:
+                        # Multiple results, let user choose
+                        print("\nSelect conversation to view:")
+                        for i, (fname, sid) in enumerate(sessions, 1):
+                            print(f"  {i}. {sid[:8]}...")
+                        
+                        try:
+                            view_num = int(input("\nEnter number (1-{}): ".format(len(sessions))))
+                            if 1 <= view_num <= len(session_paths):
+                                extractor.display_conversation(session_paths[view_num - 1])
+                                
+                                # After viewing, offer to extract
+                                extract_choice = input("\n📤 Extract this conversation? (y/N): ").strip().lower()
+                                if extract_choice == 'y':
+                                    conversation = extractor.extract_conversation(session_paths[view_num - 1])
+                                    if conversation:
+                                        output = extractor.save_as_markdown(conversation, sessions[view_num - 1][1])
+                                        print(f"✅ Saved: {output.name}")
+                        except (ValueError, IndexError):
+                            print("❌ Invalid selection")
+                
+                elif choice == 'E':
+                    # Extract all found conversations
+                    for i, (session_path, (fname, sid)) in enumerate(zip(session_paths, sessions), 1):
+                        print(f"\n📤 Extracting session {i}...")
+                        conversation = extractor.extract_conversation(session_path)
+                        if conversation:
+                            output = extractor.save_as_markdown(conversation, sid)
+                            print(f"✅ Saved: {output.name}")
+                
+                elif choice == 'Q':
+                    print("\n👋 Goodbye!")
+                    
+            except (EOFError, KeyboardInterrupt):
+                print("\n👋 Search cancelled")
+    else:
+        print(f"\n❌ No matches found for '{search_term}'")
+        print("\n💡 Tips:")
+        print("   - Try a more general search term")
+        print("   - Search is case-insensitive by default")
+        print("   - Partial matches are included")
+
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="src/search_conversations.py">
+#!/usr/bin/env python3
+"""
+Search functionality for Claude Conversation Extractor
+
+This module provides powerful search capabilities including:
+- Full-text search with relevance ranking
+- Regex pattern matching
+- Date range filtering
+- Speaker filtering (Human/Assistant)
+- Semantic search using NLP
+
+Adapted from CAKE's conversation parser for Claude conversation search.
+"""
+
+import json
+import re
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List, Optional, Set
+
+# Optional NLP imports for semantic search
+try:
+    import spacy
+
+    SPACY_AVAILABLE = True
+except ImportError:
+    SPACY_AVAILABLE = False
+    print("Note: Install spacy for enhanced semantic search capabilities")
+    print("      pip install spacy && python -m spacy download en_core_web_sm")
+
+
+@dataclass
+class SearchResult:
+    """Represents a search result with context"""
+
+    file_path: Path
+    conversation_id: str
+    matched_content: str
+    context: str  # Surrounding text for context
+    speaker: str  # 'human' or 'assistant'
+    timestamp: Optional[datetime] = None
+    relevance_score: float = 0.0
+    line_number: int = 0
+
+    def __str__(self) -> str:
+        """User-friendly string representation"""
+        return (
+            f"\n{'=' * 60}\n"
+            f"File: {self.file_path.name}\n"
+            f"Speaker: {self.speaker.title()}\n"
+            f"Relevance: {self.relevance_score:.0%}\n"
+            f"{'=' * 60}\n"
+            f"{self.context}\n"
+        )
+
+
+class ConversationSearcher:
+    """
+    Main search engine for Claude conversations.
+
+    Provides multiple search modes and intelligent ranking.
+    """
+
+    def __init__(self, cache_dir: Optional[Path] = None):
+        """
+        Initialize the searcher.
+
+        Args:
+            cache_dir: Optional directory for caching processed conversations
+        """
+        self.cache_dir = cache_dir or Path.home() / ".claude" / ".search_cache"
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Initialize NLP if available
+        self.nlp = None
+        if SPACY_AVAILABLE:
+            try:
+                self.nlp = spacy.load("en_core_web_sm")
+                # Disable unnecessary components for speed
+                self.nlp.select_pipes(disable=["ner", "lemmatizer"])
+            except Exception:
+                print("Warning: spaCy model not found. Using basic search.")
+
+        # Common words to ignore in relevance scoring
+        self.stop_words = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "have",
+            "has",
+            "had",
+            "do",
+            "does",
+            "did",
+            "will",
+            "would",
+            "could",
+            "should",
+            "may",
+            "might",
+            "i",
+            "you",
+            "we",
+            "they",
+            "it",
+            "this",
+            "that",
+            "these",
+            "those",
+        }
+
+    def search(
+        self,
+        query: str,
+        search_dir: Optional[Path] = None,
+        mode: str = "smart",
+        date_from: Optional[datetime] = None,
+        date_to: Optional[datetime] = None,
+        speaker_filter: Optional[str] = None,
+        max_results: int = 20,
+        case_sensitive: bool = False,
+    ) -> List[SearchResult]:
+        """
+        Search conversations with various filters.
+
+        Args:
+            query: Search query (text or regex pattern)
+            search_dir: Directory to search in (default: ~/.claude/projects)
+            mode: Search mode - "smart", "exact", "regex", "semantic"
+            date_from: Filter results from this date
+            date_to: Filter results until this date
+            speaker_filter: Filter by speaker - "human", "assistant", or None for both
+            max_results: Maximum number of results to return
+            case_sensitive: Whether search should be case-sensitive
+
+        Returns:
+            List of SearchResult objects sorted by relevance
+        """
+        # Default search directory
+        if search_dir is None:
+            search_dir = Path.home() / ".claude" / "projects"
+
+        # Validate search directory
+        if not search_dir.exists():
+            raise ValueError(f"Search directory does not exist: {search_dir}")
+
+        # Return empty results for empty query
+        if not query or not query.strip():
+            return []
+
+        # Find all JSONL files
+        jsonl_files = list(search_dir.rglob("*.jsonl"))
+        if not jsonl_files:
+            return []
+
+        # Apply date filtering to files if provided
+        if date_from or date_to:
+            jsonl_files = self._filter_files_by_date(jsonl_files, date_from, date_to)
+
+        # Search based on mode
+        all_results = []
+
+        for jsonl_file in jsonl_files:
+            if mode == "regex":
+                results = self._search_regex(
+                    jsonl_file, query, speaker_filter, case_sensitive
+                )
+            elif mode == "exact":
+                results = self._search_exact(
+                    jsonl_file, query, speaker_filter, case_sensitive
+                )
+            elif mode == "semantic" and self.nlp:
+                results = self._search_semantic(jsonl_file, query, speaker_filter)
+            else:  # smart mode - combines multiple approaches
+                results = self._search_smart(
+                    jsonl_file, query, speaker_filter, case_sensitive
+                )
+
+            all_results.extend(results)
+
+        # Sort by relevance score
+        all_results.sort(key=lambda x: x.relevance_score, reverse=True)
+
+        # Return top results
+        return all_results[:max_results]
+
+    def _filter_files_by_date(
+        self,
+        files: List[Path],
+        date_from: Optional[datetime],
+        date_to: Optional[datetime],
+    ) -> List[Path]:
+        """Filter files by modification date."""
+        filtered = []
+
+        for file in files:
+            file_mtime = datetime.fromtimestamp(file.stat().st_mtime)
+
+            if date_from and file_mtime < date_from:
+                continue
+            if date_to and file_mtime > date_to:
+                continue
+
+            filtered.append(file)
+
+        return filtered
+
+    def _search_smart(
+        self,
+        jsonl_file: Path,
+        query: str,
+        speaker_filter: Optional[str],
+        case_sensitive: bool,
+    ) -> List[SearchResult]:
+        """
+        Smart search that combines multiple techniques.
+
+        Uses exact matching, fuzzy matching, and semantic similarity.
+        """
+        results = []
+        conversation_id = jsonl_file.stem
+
+        # Process query
+        if not case_sensitive:
+            query_lower = query.lower()
+            query_tokens = set(query_lower.split()) - self.stop_words
+        else:
+            query_tokens = set(query.split()) - self.stop_words
+
+        # Read and parse JSONL
+        try:
+            with open(jsonl_file, "r", encoding="utf-8") as f:
+                line_num = 0
+                for line in f:
+                    line_num += 1
+                    try:
+                        entry = json.loads(line.strip())
+
+                        # Extract message based on entry type
+                        if entry.get("type") in ["user", "assistant"]:
+                            speaker = (
+                                "human" if entry["type"] == "user" else "assistant"
+                            )
+
+                            # Apply speaker filter
+                            if speaker_filter and speaker != speaker_filter:
+                                continue
+
+                            # Extract content
+                            content = self._extract_content(entry)
+                            if not content:
+                                continue
+
+                            # Calculate relevance
+                            relevance = self._calculate_relevance(
+                                content, query, query_tokens, case_sensitive
+                            )
+
+                            if relevance > 0.1:  # Threshold for inclusion
+                                # Extract context
+                                context = self._extract_context(
+                                    content, query, case_sensitive
+                                )
+
+                                # Parse timestamp if present
+                                timestamp = None
+                                timestamp_str = entry.get("timestamp")
+                                if timestamp_str:
+                                    try:
+                                        timestamp = datetime.fromisoformat(
+                                            timestamp_str.replace("Z", "+00:00")
+                                        )
+                                    except ValueError:
+                                        pass
+
+                                result = SearchResult(
+                                    file_path=jsonl_file,
+                                    conversation_id=conversation_id,
+                                    matched_content=content[:200],
+                                    context=context,
+                                    speaker=speaker,
+                                    timestamp=timestamp,
+                                    relevance_score=relevance,
+                                    line_number=line_num,
+                                )
+                                results.append(result)
+
+                    except json.JSONDecodeError:
+                        continue
+
+        except Exception as e:
+            print(f"Error searching {jsonl_file}: {e}")
+
+        return results
+
+    def _search_exact(
+        self,
+        jsonl_file: Path,
+        query: str,
+        speaker_filter: Optional[str],
+        case_sensitive: bool,
+    ) -> List[SearchResult]:
+        """Exact string matching search."""
+        results = []
+        conversation_id = jsonl_file.stem
+
+        search_query = query if case_sensitive else query.lower()
+
+        try:
+            with open(jsonl_file, "r", encoding="utf-8") as f:
+                line_num = 0
+                for line in f:
+                    line_num += 1
+                    try:
+                        entry = json.loads(line.strip())
+
+                        if entry.get("type") in ["user", "assistant"]:
+                            speaker = (
+                                "human" if entry["type"] == "user" else "assistant"
+                            )
+
+                            if speaker_filter and speaker != speaker_filter:
+                                continue
+
+                            content = self._extract_content(entry)
+                            if not content:
+                                continue
+
+                            search_content = (
+                                content if case_sensitive else content.lower()
+                            )
+
+                            if search_query in search_content:
+                                # Calculate relevance based on match frequency
+                                match_count = search_content.count(search_query)
+                                relevance = min(1.0, match_count * 0.2)
+
+                                context = self._extract_context(
+                                    content, query, case_sensitive
+                                )
+
+                                # Parse timestamp if present
+                                timestamp = None
+                                timestamp_str = entry.get("timestamp")
+                                if timestamp_str:
+                                    try:
+                                        timestamp = datetime.fromisoformat(
+                                            timestamp_str.replace("Z", "+00:00")
+                                        )
+                                    except ValueError:
+                                        pass
+
+                                result = SearchResult(
+                                    file_path=jsonl_file,
+                                    conversation_id=conversation_id,
+                                    matched_content=content[:200],
+                                    context=context,
+                                    speaker=speaker,
+                                    timestamp=timestamp,
+                                    relevance_score=relevance,
+                                    line_number=line_num,
+                                )
+                                results.append(result)
+
+                    except json.JSONDecodeError:
+                        continue
+
+        except Exception as e:
+            print(f"Error searching {jsonl_file}: {e}")
+
+        return results
+
+    def _search_regex(
+        self,
+        jsonl_file: Path,
+        pattern: str,
+        speaker_filter: Optional[str],
+        case_sensitive: bool,
+    ) -> List[SearchResult]:
+        """Regex pattern matching search."""
+        results = []
+        conversation_id = jsonl_file.stem
+
+        # Compile regex pattern
+        try:
+            flags = 0 if case_sensitive else re.IGNORECASE
+            regex = re.compile(pattern, flags)
+        except re.error as e:
+            print(f"Invalid regex pattern: {e}")
+            return []
+
+        try:
+            with open(jsonl_file, "r", encoding="utf-8") as f:
+                line_num = 0
+                for line in f:
+                    line_num += 1
+                    try:
+                        entry = json.loads(line.strip())
+
+                        if entry.get("type") in ["user", "assistant"]:
+                            speaker = (
+                                "human" if entry["type"] == "user" else "assistant"
+                            )
+
+                            if speaker_filter and speaker != speaker_filter:
+                                continue
+
+                            content = self._extract_content(entry)
+                            if not content:
+                                continue
+
+                            matches = list(regex.finditer(content))
+
+                            if matches:
+                                # Calculate relevance based on match quality
+                                relevance = min(1.0, len(matches) * 0.2)
+
+                                # Get context around first match
+                                first_match = matches[0]
+                                start = max(0, first_match.start() - 100)
+                                end = min(len(content), first_match.end() + 100)
+                                context = "..." + content[start:end] + "..."
+
+                                # Parse timestamp if present
+                                timestamp = None
+                                timestamp_str = entry.get("timestamp")
+                                if timestamp_str:
+                                    try:
+                                        timestamp = datetime.fromisoformat(
+                                            timestamp_str.replace("Z", "+00:00")
+                                        )
+                                    except ValueError:
+                                        pass
+
+                                result = SearchResult(
+                                    file_path=jsonl_file,
+                                    conversation_id=conversation_id,
+                                    matched_content=first_match.group(),
+                                    context=context,
+                                    speaker=speaker,
+                                    timestamp=timestamp,
+                                    relevance_score=relevance,
+                                    line_number=line_num,
+                                )
+                                results.append(result)
+
+                    except json.JSONDecodeError:
+                        continue
+
+        except Exception as e:
+            print(f"Error searching {jsonl_file}: {e}")
+
+        return results
+
+    def _search_semantic(
+        self, jsonl_file: Path, query: str, speaker_filter: Optional[str]
+    ) -> List[SearchResult]:
+        """
+        Semantic search using spaCy NLP.
+
+        Finds conceptually similar content even without exact matches.
+        """
+        if not self.nlp:
+            return []
+
+        results = []
+        conversation_id = jsonl_file.stem
+
+        # Process query with spaCy
+        query_doc = self.nlp(query.lower())
+        query_tokens = [
+            token for token in query_doc if not token.is_stop and token.is_alpha
+        ]
+
+        try:
+            with open(jsonl_file, "r", encoding="utf-8") as f:
+                line_num = 0
+                for line in f:
+                    line_num += 1
+                    try:
+                        entry = json.loads(line.strip())
+
+                        if entry.get("type") in ["user", "assistant"]:
+                            speaker = (
+                                "human" if entry["type"] == "user" else "assistant"
+                            )
+
+                            if speaker_filter and speaker != speaker_filter:
+                                continue
+
+                            content = self._extract_content(entry)
+                            if not content:
+                                continue
+
+                            # Process content with spaCy
+                            content_doc = self.nlp(content.lower())
+
+                            # Calculate semantic similarity
+                            similarity = self._calculate_semantic_similarity(
+                                query_doc, query_tokens, content_doc
+                            )
+
+                            if similarity > 0.3:  # Threshold for semantic matches
+                                context = self._extract_context(content, query, False)
+
+                                # Parse timestamp if present
+                                timestamp = None
+                                timestamp_str = entry.get("timestamp")
+                                if timestamp_str:
+                                    try:
+                                        timestamp = datetime.fromisoformat(
+                                            timestamp_str.replace("Z", "+00:00")
+                                        )
+                                    except ValueError:
+                                        pass
+
+                                result = SearchResult(
+                                    file_path=jsonl_file,
+                                    conversation_id=conversation_id,
+                                    matched_content=content[:200],
+                                    context=context,
+                                    speaker=speaker,
+                                    timestamp=timestamp,
+                                    relevance_score=similarity,
+                                    line_number=line_num,
+                                )
+                                results.append(result)
+
+                    except json.JSONDecodeError:
+                        continue
+
+        except Exception as e:
+            print(f"Error searching {jsonl_file}: {e}")
+
+        return results
+
+    def _extract_content(self, entry: Dict) -> str:
+        """Extract text content from a JSONL entry."""
+        # Handle test format (type: user/assistant, content: string)
+        if entry.get("type") in ["user", "assistant"] and "content" in entry:
+            content = entry["content"]
+            if isinstance(content, str):
+                return content
+
+        # Handle actual Claude log format (type: user/assistant, message: {...})
+        if "message" in entry:
+            msg = entry["message"]
+            if isinstance(msg, dict):
+                content = msg.get("content", "")
+
+                # Handle different content formats
+                if isinstance(content, list):
+                    # Extract text from content array
+                    text_parts = []
+                    for item in content:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            text_parts.append(item.get("text", ""))
+                        elif isinstance(item, str):
+                            text_parts.append(item)
+                    return " ".join(text_parts)
+                elif isinstance(content, str):
+                    return content
+
+        return ""
+
+    def _calculate_relevance(
+        self, content: str, query: str, query_tokens: Set[str], case_sensitive: bool
+    ) -> float:
+        """
+        Calculate relevance score for content against query.
+
+        Uses multiple factors:
+        - Exact match bonus
+        - Token overlap
+        - Proximity of terms
+        - Match density
+        """
+        relevance = 0.0
+
+        # Prepare content
+        if not case_sensitive:
+            content_lower = content.lower()
+            query_lower = query.lower()
+        else:
+            content_lower = content
+            query_lower = query
+
+        # Exact match bonus
+        if query_lower in content_lower:
+            relevance += 0.5
+            # Additional bonus for multiple occurrences
+            count = content_lower.count(query_lower)
+            relevance += min(0.3, count * 0.1)
+
+        # Token overlap
+        content_tokens = set(content_lower.split()) - self.stop_words
+        if query_tokens and content_tokens:
+            overlap = len(query_tokens & content_tokens)
+            relevance += min(0.4, overlap / len(query_tokens) * 0.4)
+
+        # Proximity bonus - are query terms near each other?
+        if len(query_tokens) > 1:
+            # Check if all query tokens appear within a window
+            words = content_lower.split()
+            for i in range(len(words) - len(query_tokens)):
+                window = set(words[i : i + len(query_tokens) * 2])
+                if query_tokens.issubset(window):
+                    relevance += 0.1
+                    break
+
+        return min(1.0, relevance)
+
+    def _calculate_semantic_similarity(
+        self, query_doc, query_tokens, content_doc
+    ) -> float:
+        """Calculate semantic similarity using spaCy."""
+        if not query_tokens:
+            return 0.0
+
+        # Find semantically similar tokens
+        similar_count = 0
+        for query_token in query_tokens:
+            for content_token in content_doc:
+                if content_token.is_alpha and not content_token.is_stop:
+                    # Check if tokens are similar (same lemma or high similarity)
+                    if (
+                        query_token.lemma_ == content_token.lemma_
+                        or query_token.text == content_token.text
+                    ):
+                        similar_count += 1
+                        break
+
+        # Calculate similarity score
+        if query_tokens:
+            base_similarity = similar_count / len(query_tokens)
+        else:
+            base_similarity = 0.0
+
+        # Boost for exact phrase matches
+        if query_doc.text.lower() in content_doc.text.lower():
+            base_similarity = min(1.0, base_similarity + 0.3)
+
+        return base_similarity
+
+    def _extract_context(
+        self, content: str, query: str, case_sensitive: bool, context_size: int = 150
+    ) -> str:
+        """Extract context around the match for display."""
+        if not case_sensitive:
+            # Find match position
+            pos = content.lower().find(query.lower())
+        else:
+            pos = content.find(query)
+
+        if pos == -1:
+            # No exact match, return beginning of content
+            return content[: context_size * 2] + (
+                "..." if len(content) > context_size * 2 else ""
+            )
+
+        # Extract context around match
+        start = max(0, pos - context_size)
+        end = min(len(content), pos + len(query) + context_size)
+
+        context = content[start:end]
+
+        # Add ellipsis if truncated
+        if start > 0:
+            context = "..." + context
+        if end < len(content):
+            context = context + "..."
+
+        # Highlight the match
+        if not case_sensitive:
+            # Case-insensitive replacement
+            pattern = re.compile(re.escape(query), re.IGNORECASE)
+            context = pattern.sub(f"**{query.upper()}**", context)
+        else:
+            context = context.replace(query, f"**{query}**")
+
+        return context
+
+    def search_by_date_range(
+        self, date_from: datetime, date_to: datetime, search_dir: Optional[Path] = None
+    ) -> List[Path]:
+        """Find all conversation files within a date range."""
+        if search_dir is None:
+            search_dir = Path.home() / ".claude" / "projects"
+
+        jsonl_files = list(search_dir.rglob("*.jsonl"))
+        return self._filter_files_by_date(jsonl_files, date_from, date_to)
+
+    def get_conversation_topics(
+        self, jsonl_file: Path, max_topics: int = 5
+    ) -> List[str]:
+        """
+        Extract main topics from a conversation.
+
+        Uses NLP to identify key themes and subjects.
+        """
+        if not self.nlp:
+            return []
+
+        # Collect all content
+        all_content = []
+        try:
+            with open(jsonl_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        entry = json.loads(line.strip())
+                        content = self._extract_content(entry)
+                        if content:
+                            all_content.append(content)
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            return []
+
+        if not all_content:
+            return []
+
+        # Process with spaCy
+        full_text = " ".join(all_content[:10])  # Limit to avoid processing too much
+        doc = self.nlp(full_text)
+
+        # Extract noun phrases as topics
+        noun_phrases = []
+        for chunk in doc.noun_chunks:
+            if len(chunk.text.split()) <= 3:  # Reasonable length
+                noun_phrases.append(chunk.text.lower())
+
+        # Count frequency
+        phrase_counts = {}
+        for phrase in noun_phrases:
+            phrase_counts[phrase] = phrase_counts.get(phrase, 0) + 1
+
+        # Sort by frequency
+        sorted_phrases = sorted(phrase_counts.items(), key=lambda x: x[1], reverse=True)
+
+        # Return top topics
+        return [phrase for phrase, count in sorted_phrases[:max_topics] if count > 1]
+
+
+def create_search_index(search_dir: Path, output_file: Path) -> None:
+    """
+    Create a search index for faster subsequent searches.
+
+    This pre-processes all conversations and saves metadata.
+    """
+    index = {"created": datetime.now().isoformat(), "conversations": {}}
+
+    jsonl_files = list(search_dir.rglob("*.jsonl"))
+
+    for jsonl_file in jsonl_files:
+        conv_id = jsonl_file.stem
+
+        # Extract metadata
+        metadata = {
+            "path": str(jsonl_file),
+            "modified": datetime.fromtimestamp(jsonl_file.stat().st_mtime).isoformat(),
+            "size": jsonl_file.stat().st_size,
+            "message_count": 0,
+            "speakers": set(),
+            "first_message": None,
+            "last_message": None,
+        }
+
+        # Parse file
+        try:
+            with open(jsonl_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        entry = json.loads(line.strip())
+                        if entry.get("type") in ["user", "assistant"]:
+                            metadata["message_count"] += 1
+                            speaker = (
+                                "human" if entry["type"] == "user" else "assistant"
+                            )
+                            metadata["speakers"].add(speaker)
+
+                            if metadata["first_message"] is None:
+                                metadata["first_message"] = entry.get("timestamp")
+                            metadata["last_message"] = entry.get("timestamp")
+
+                    except json.JSONDecodeError:
+                        continue
+        except Exception:
+            continue
+
+        # Convert set to list for JSON serialization
+        metadata["speakers"] = list(metadata["speakers"])
+
+        index["conversations"][conv_id] = metadata
+
+    # Save index
+    with open(output_file, "w") as f:
+        json.dump(index, f, indent=2)
+
+    print(f"Created search index with {len(index['conversations'])} conversations")
+
+
+# Example usage and testing
+if __name__ == "__main__":
+    # Test the search functionality
+    searcher = ConversationSearcher()
+
+    # Example searches
+    print("Testing search functionality...")
+
+    # Smart search
+    results = searcher.search("python error", mode="smart", max_results=5)
+    print(f"\nFound {len(results)} results for 'python error'")
+    for result in results[:2]:
+        print(result)
+
+    # Regex search
+    results = searcher.search(r"import\s+\w+", mode="regex", max_results=5)
+    print(f"\nFound {len(results)} results for regex 'import\\s+\\w+'")
+
+    # Date range search
+    week_ago = datetime.now() - timedelta(days=7)
+    results = searcher.search("", date_from=week_ago, max_results=5)
+    print(f"\nFound {len(results)} conversations from the last week")
+</file>
+
+<file path="tests/fixtures/__init__.py">
+# Test fixtures package
+</file>
+
+<file path="tests/fixtures/sample_conversations.py">
+#!/usr/bin/env python3
+"""
+Sample conversations for testing search functionality
+"""
+
+import json
+import tempfile
+from pathlib import Path
+
+# Sample conversation data that covers various scenarios
+SAMPLE_CONVERSATIONS = [
+    {
+        "id": "python_errors",
+        "messages": [
+            {
+                "type": "user",
+                "content": "How do I handle Python errors?",
+                "timestamp": "2024-01-15T10:00:00Z",
+            },
+            {
+                "type": "assistant",
+                "content": (
+                    "To handle errors in Python, use try-except blocks. "
+                    "Here's an example:\n\n```python\ntry:\n    risky_operation()\n"
+                    "except ValueError as e:\n    print(f'Error: {e}')\n```"
+                ),
+                "timestamp": "2024-01-15T10:01:00Z",
+            },
+            {
+                "type": "user",
+                "content": "What about handling multiple exception types?",
+                "timestamp": "2024-01-15T10:02:00Z",
+            },
+            {
+                "type": "assistant",
+                "content": (
+                    "You can handle multiple exceptions using multiple except blocks "
+                    "or a tuple of exception types."
+                ),
+                "timestamp": "2024-01-15T10:03:00Z",
+            },
+        ],
+    },
+    {
+        "id": "file_operations",
+        "messages": [
+            {
+                "type": "user",
+                "content": "Can you show me how to read and write files in Python?",
+                "timestamp": "2024-01-16T14:30:00Z",
+            },
+            {
+                "type": "assistant",
+                "content": (
+                    "Here's how to work with files:\n\n```python\n# Reading\n"
+                    "with open('file.txt', 'r') as f:\n    content = f.read()\n\n"
+                    "# Writing\nwith open('output.txt', 'w') as f:\n"
+                    "    f.write('Hello, World!')\n```"
+                ),
+                "timestamp": "2024-01-16T14:31:00Z",
+            },
+        ],
+    },
+    {
+        "id": "regex_patterns",
+        "messages": [
+            {
+                "type": "user",
+                "content": "I need help with regex patterns for email validation",
+                "timestamp": "2024-01-17T09:15:00Z",
+            },
+            {
+                "type": "assistant",
+                "content": (
+                    "Here's a regex pattern for email validation:\n\n```python\n"
+                    "import re\n\npattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+"
+                    "\\.[a-zA-Z]{2,}$'\nemail = 'user@example.com'\n\n"
+                    "if re.match(pattern, email):\n    print('Valid email')\n```"
+                ),
+                "timestamp": "2024-01-17T09:16:00Z",
+            },
+        ],
+    },
+    {
+        "id": "api_requests",
+        "messages": [
+            {
+                "type": "user",
+                "content": "How do I make API requests in Python?",
+                "timestamp": "2024-01-18T16:45:00Z",
+            },
+            {
+                "type": "assistant",
+                "content": (
+                    "You can use the requests library:\n\n```python\n"
+                    "import requests\n\nresponse = requests.get("
+                    "'https://api.example.com/data')\n"
+                    "if response.status_code == 200:\n    data = response.json()\n```"
+                ),
+                "timestamp": "2024-01-18T16:46:00Z",
+            },
+        ],
+    },
+    {
+        "id": "database_connection",
+        "messages": [
+            {
+                "type": "user",
+                "content": "What's the best way to connect to a PostgreSQL database?",
+                "timestamp": "2024-01-19T11:20:00Z",
+            },
+            {
+                "type": "assistant",
+                "content": "I recommend using psycopg2 or SQLAlchemy for PostgreSQL connections.",
+                "timestamp": "2024-01-19T11:21:00Z",
+            },
+        ],
+    },
+]
+
+
+class ConversationFixtures:
+    """Helper class to create test conversation files"""
+
+    @staticmethod
+    def create_test_environment():
+        """Create a temporary directory with sample conversations"""
+        temp_dir = tempfile.mkdtemp()
+        claude_dir = Path(temp_dir) / ".claude" / "projects"
+
+        # Create conversations in different project directories
+        projects = ["python_help", "web_dev", "data_science"]
+
+        all_files = []
+        conversation_idx = 0
+
+        for project in projects:
+            project_dir = claude_dir / project
+            project_dir.mkdir(parents=True)
+
+            # Create 1-2 conversations per project
+            for i in range(min(2, len(SAMPLE_CONVERSATIONS) - conversation_idx)):
+                if conversation_idx >= len(SAMPLE_CONVERSATIONS):
+                    break
+
+                conv_data = SAMPLE_CONVERSATIONS[conversation_idx]
+                chat_file = project_dir / f"chat_{conv_data['id']}.jsonl"
+
+                # Write messages as JSONL
+                with open(chat_file, "w") as f:
+                    for msg in conv_data["messages"]:
+                        f.write(json.dumps(msg) + "\n")
+
+                all_files.append(chat_file)
+                conversation_idx += 1
+
+        return temp_dir, all_files
+
+    @staticmethod
+    def get_expected_search_results():
+        """Get expected search results for various queries"""
+        return {
+            # Exact matches
+            "Python errors": ["python_errors"],
+            "PostgreSQL database": ["database_connection"],
+            # Partial matches
+            "python": ["python_errors", "file_operations", "api_requests"],
+            "error": ["python_errors"],
+            "file": ["file_operations"],
+            "regex": ["regex_patterns"],
+            "API": ["api_requests"],
+            # Case insensitive
+            "PYTHON": ["python_errors", "file_operations", "api_requests"],
+            # Multi-word
+            "handle errors": ["python_errors"],
+            "read write files": ["file_operations"],
+            # Code snippets
+            "try except": ["python_errors"],
+            "requests.get": ["api_requests"],
+            "open file": ["file_operations"],
+            # Regex patterns
+            r"except \w+Error": ["python_errors"],
+            r"@[a-zA-Z0-9.-]+": ["regex_patterns"],
+            # No matches
+            "javascript": [],
+            "rust programming": [],
+        }
+
+    @staticmethod
+    def get_date_filtered_results():
+        """Get expected results for date-filtered searches"""
+        # Assuming we set file modification times appropriately
+        return {
+            # Last 2 days (should get latest conversations)
+            ("python", 2): ["api_requests", "database_connection"],
+            # Last 5 days (should get all)
+            ("python", 5): ["python_errors", "file_operations", "api_requests"],
+            # Specific date range
+            ("error", "2024-01-15", "2024-01-16"): ["python_errors"],
+        }
+
+    @staticmethod
+    def get_speaker_filtered_results():
+        """Get expected results for speaker-filtered searches"""
+        return {
+            # Human only
+            ("Python", "human"): ["python_errors", "file_operations", "api_requests"],
+            # Assistant only
+            ("try-except", "assistant"): ["python_errors"],
+            ("SQLAlchemy", "assistant"): ["database_connection"],
+        }
+
+
+def cleanup_test_environment(temp_dir):
+    """Clean up the test environment"""
+    import shutil
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
+</file>
+
+<file path="tests/__init__.py">
+
+</file>
+
+<file path="tests/conftest.py">
+"""Pytest configuration for Claude Conversation Extractor tests."""
+
+import sys
+from pathlib import Path
+
+# Add src directory to Python path for testing
+src_dir = Path(__file__).parent.parent / "src"
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+</file>
+
+<file path=".gitignore">
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Project specific
+claude-logs/
+*.md.backup
+test-output/
+
+# Local testing
+test_conversations/
+local_tests/
+test_*.py
+
+# Database and cache files
+*.db
+*.db-shm
+*.db-wal
+claude_extractor.db*
+
+# Build artifacts
+*.o
+*.dylib
+*.so
+*.log
+
+# Development files
+*.patch
+bandit_report.json
+demo_*.py
+RELEASE_NOTES_*.md
+PR_BODY.md
+
+# Cache directories
+.zig-cache/
+claude_ui/
+</file>
+
+<file path="LICENSE">
+MIT License
+
+Copyright (c) 2025 Dustin Kirby
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+</file>
+
+<file path=".github/workflows/publish.yml">
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check package
+      run: twine check dist/*
+    
+    - name: Publish to Test PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+      run: |
+        twine upload --repository testpypi dist/*
+      continue-on-error: true
+    
+    - name: Publish to PyPI
+      if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        twine upload dist/*
+</file>
+
+<file path="src/extract_claude_logs.py">
+#!/usr/bin/env python3
+"""
+Extract clean conversation logs from Claude Code's internal JSONL files
+
+This tool parses the undocumented JSONL format used by Claude Code to store
+conversations locally in ~/.claude/projects/ and exports them as clean,
+readable markdown files.
+"""
+
+import argparse
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+
+class ClaudeConversationExtractor:
+    """Extract and convert Claude Code conversations from JSONL to markdown."""
+
+    def __init__(self, output_dir: Optional[Path] = None):
+        """Initialize the extractor with Claude's directory and output location."""
+        self.claude_dir = Path.home() / ".claude" / "projects"
+
+        if output_dir:
+            self.output_dir = Path(output_dir)
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            # Try multiple possible output directories
+            possible_dirs = [
+                Path.home() / "Desktop" / "Claude logs",
+                Path.home() / "Documents" / "Claude logs",
+                Path.home() / "Claude logs",
+                Path.cwd() / "claude-logs",
+            ]
+
+            # Use the first directory we can create
+            for dir_path in possible_dirs:
+                try:
+                    dir_path.mkdir(parents=True, exist_ok=True)
+                    # Test if we can write to it
+                    test_file = dir_path / ".test"
+                    test_file.touch()
+                    test_file.unlink()
+                    self.output_dir = dir_path
+                    break
+                except Exception:
+                    continue
+            else:
+                # Fallback to current directory
+                self.output_dir = Path.cwd() / "claude-logs"
+                self.output_dir.mkdir(exist_ok=True)
+
+        print(f"📁 Saving logs to: {self.output_dir}")
+
+    def find_sessions(self, project_path: Optional[str] = None, include_subagents: bool = False) -> List[Path]:
+        """Find all JSONL session files, sorted by most recent first.
+
+        Only returns top-level session files by default (excludes subagent files
+        inside <session-id>/subagents/ directories).
+
+        Args:
+            project_path: Optional project subdirectory to search
+            include_subagents: If True, also include subagent JSONL files
+        """
+        if project_path:
+            search_dir = self.claude_dir / project_path
+        else:
+            search_dir = self.claude_dir
+
+        sessions = []
+        if search_dir.exists():
+            for jsonl_file in search_dir.rglob("*.jsonl"):
+                # Skip subagent files unless explicitly requested
+                if not include_subagents and "subagents" in jsonl_file.parts:
+                    continue
+                sessions.append(jsonl_file)
+        # Use (mtime, path) as sort key for stable ordering across calls
+        return sorted(sessions, key=lambda x: (x.stat().st_mtime, str(x)), reverse=True)
+
+    def find_subagents(self, session_path: Path) -> List[Tuple[Path, Dict]]:
+        """Find all subagent JSONL files belonging to a session.
+
+        Args:
+            session_path: Path to the main session JSONL file
+
+        Returns:
+            List of (jsonl_path, meta_dict) tuples, sorted by modification time
+        """
+        session_id = session_path.stem
+        session_dir = session_path.parent / session_id / "subagents"
+
+        subagents = []
+        if session_dir.exists():
+            for jsonl_file in session_dir.glob("*.jsonl"):
+                meta = {}
+                meta_file = jsonl_file.with_suffix(".meta.json")
+                if meta_file.exists():
+                    try:
+                        with open(meta_file, "r", encoding="utf-8") as f:
+                            meta = json.load(f)
+                    except Exception:
+                        pass
+                subagents.append((jsonl_file, meta))
+
+        return sorted(subagents, key=lambda x: x[0].stat().st_mtime)
+
+    def find_session_by_id(self, session_id_prefix: str, quiet: bool = False) -> Optional[Path]:
+        """Find a session JSONL file by session ID prefix.
+
+        Args:
+            session_id_prefix: First 7+ characters of the session ID
+            quiet: If True, suppress error messages (used when falling back to numeric mode)
+
+        Returns:
+            Path to the matching session JSONL, or None
+        """
+        all_sessions = self.find_sessions()
+        matches = [s for s in all_sessions if s.stem.startswith(session_id_prefix)]
+
+        if len(matches) == 1:
+            return matches[0]
+        elif len(matches) > 1:
+            print(f"⚠️  Prefix '{session_id_prefix}' matches {len(matches)} sessions:")
+            for m in matches:
+                print(f"   {m.stem}")
+            print("   Please use a longer prefix to disambiguate.")
+            return None
+        else:
+            if not quiet:
+                print(f"❌ No session found matching prefix '{session_id_prefix}'")
+            return None
+
+    def extract_conversation(self, jsonl_path: Path, detailed: bool = False) -> List[Dict[str, str]]:
+        """Extract conversation messages from a JSONL file.
+        
+        Args:
+            jsonl_path: Path to the JSONL file
+            detailed: If True, include tool use, MCP responses, and system messages
+        """
+        conversation = []
+
+        try:
+            with open(jsonl_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        entry = json.loads(line.strip())
+
+                        # Extract user messages
+                        if entry.get("type") == "user" and "message" in entry:
+                            msg = entry["message"]
+                            if isinstance(msg, dict) and msg.get("role") == "user":
+                                content = msg.get("content", "")
+                                text = self._extract_text_content(content)
+
+                                if text and text.strip():
+                                    conversation.append(
+                                        {
+                                            "role": "user",
+                                            "content": text,
+                                            "timestamp": entry.get("timestamp", ""),
+                                        }
+                                    )
+
+                        # Extract assistant messages
+                        elif entry.get("type") == "assistant" and "message" in entry:
+                            msg = entry["message"]
+                            if isinstance(msg, dict) and msg.get("role") == "assistant":
+                                content = msg.get("content", [])
+                                text = self._extract_text_content(content, detailed=detailed)
+
+                                if text and text.strip():
+                                    conversation.append(
+                                        {
+                                            "role": "assistant",
+                                            "content": text,
+                                            "timestamp": entry.get("timestamp", ""),
+                                        }
+                                    )
+                        
+                        # Include tool use and system messages if detailed mode
+                        elif detailed:
+                            # Extract tool use events
+                            if entry.get("type") == "tool_use":
+                                tool_data = entry.get("tool", {})
+                                tool_name = tool_data.get("name", "unknown")
+                                tool_input = tool_data.get("input", {})
+                                conversation.append(
+                                    {
+                                        "role": "tool_use",
+                                        "content": f"🔧 Tool: {tool_name}\nInput: {json.dumps(tool_input, indent=2, ensure_ascii=False)}",
+                                        "timestamp": entry.get("timestamp", ""),
+                                    }
+                                )
+                            
+                            # Extract tool results
+                            elif entry.get("type") == "tool_result":
+                                result = entry.get("result", {})
+                                output = result.get("output", "") or result.get("error", "")
+                                conversation.append(
+                                    {
+                                        "role": "tool_result",
+                                        "content": f"📤 Result:\n{output}",
+                                        "timestamp": entry.get("timestamp", ""),
+                                    }
+                                )
+                            
+                            # Extract system messages
+                            elif entry.get("type") == "system" and "message" in entry:
+                                msg = entry.get("message", "")
+                                if msg:
+                                    conversation.append(
+                                        {
+                                            "role": "system",
+                                            "content": f"ℹ️ System: {msg}",
+                                            "timestamp": entry.get("timestamp", ""),
+                                        }
+                                    )
+
+                    except json.JSONDecodeError:
+                        continue
+                    except Exception:
+                        # Silently skip problematic entries
+                        continue
+
+        except Exception as e:
+            print(f"❌ Error reading file {jsonl_path}: {e}")
+
+        return conversation
+
+    def _extract_text_content(self, content, detailed: bool = False) -> str:
+        """Extract text from various content formats Claude uses.
+        
+        Args:
+            content: The content to extract from
+            detailed: If True, include tool use blocks and other metadata
+        """
+        if isinstance(content, str):
+            return content
+        elif isinstance(content, list):
+            # Extract text from content array
+            text_parts = []
+            for item in content:
+                if isinstance(item, dict):
+                    if item.get("type") == "text":
+                        text_parts.append(item.get("text", ""))
+                    elif detailed and item.get("type") == "tool_use":
+                        # Include tool use details in detailed mode
+                        tool_name = item.get("name", "unknown")
+                        tool_input = item.get("input", {})
+                        text_parts.append(f"\n🔧 Using tool: {tool_name}")
+                        text_parts.append(f"Input: {json.dumps(tool_input, indent=2, ensure_ascii=False)}\n")
+            return "\n".join(text_parts)
+        else:
+            return str(content)
+
+    def display_conversation(self, jsonl_path: Path, detailed: bool = False) -> None:
+        """Display a conversation in the terminal with pagination.
+        
+        Args:
+            jsonl_path: Path to the JSONL file
+            detailed: If True, include tool use and system messages
+        """
+        try:
+            # Extract conversation
+            messages = self.extract_conversation(jsonl_path, detailed=detailed)
+            
+            if not messages:
+                print("❌ No messages found in conversation")
+                return
+            
+            # Get session info
+            session_id = jsonl_path.stem
+            
+            # Clear screen and show header
+            print("\033[2J\033[H", end="")  # Clear screen
+            print("=" * 60)
+            print(f"📄 Viewing: {jsonl_path.parent.name}")
+            print(f"Session: {session_id[:8]}...")
+            
+            # Get timestamp from first message
+            first_timestamp = messages[0].get("timestamp", "")
+            if first_timestamp:
+                try:
+                    dt = datetime.fromisoformat(first_timestamp.replace("Z", "+00:00"))
+                    print(f"Date: {dt.strftime('%Y-%m-%d %H:%M:%S')}")
+                except Exception:
+                    pass
+            
+            print("=" * 60)
+            print("↑↓ to scroll • Q to quit • Enter to continue\n")
+            
+            # Display messages with pagination
+            lines_shown = 8  # Header lines
+            lines_per_page = 30
+            
+            for i, msg in enumerate(messages):
+                role = msg["role"]
+                content = msg["content"]
+                
+                # Format role display
+                if role == "user" or role == "human":
+                    print(f"\n{'─' * 40}")
+                    print(f"👤 HUMAN:")
+                    print(f"{'─' * 40}")
+                elif role == "assistant":
+                    print(f"\n{'─' * 40}")
+                    print(f"🤖 CLAUDE:")
+                    print(f"{'─' * 40}")
+                elif role == "tool_use":
+                    print(f"\n🔧 TOOL USE:")
+                elif role == "tool_result":
+                    print(f"\n📤 TOOL RESULT:")
+                elif role == "system":
+                    print(f"\nℹ️ SYSTEM:")
+                else:
+                    print(f"\n{role.upper()}:")
+                
+                # Display content (limit very long messages)
+                lines = content.split('\n')
+                max_lines_per_msg = 50
+                
+                for line_idx, line in enumerate(lines[:max_lines_per_msg]):
+                    # Wrap very long lines
+                    if len(line) > 100:
+                        line = line[:97] + "..."
+                    print(line)
+                    lines_shown += 1
+                    
+                    # Check if we need to paginate
+                    if lines_shown >= lines_per_page:
+                        response = input("\n[Enter] Continue • [Q] Quit: ").strip().upper()
+                        if response == "Q":
+                            print("\n👋 Stopped viewing")
+                            return
+                        # Clear screen for next page
+                        print("\033[2J\033[H", end="")
+                        lines_shown = 0
+                
+                if len(lines) > max_lines_per_msg:
+                    print(f"... [{len(lines) - max_lines_per_msg} more lines truncated]")
+                    lines_shown += 1
+            
+            print("\n" + "=" * 60)
+            print("📄 End of conversation")
+            print("=" * 60)
+            input("\nPress Enter to continue...")
+            
+        except Exception as e:
+            print(f"❌ Error displaying conversation: {e}")
+            input("\nPress Enter to continue...")
+
+    def _get_date_info(self, conversation: List[Dict[str, str]]) -> Tuple[str, str]:
+        """Extract date and time strings from conversation's first message."""
+        first_timestamp = conversation[0].get("timestamp", "") if conversation else ""
+        if first_timestamp:
+            try:
+                dt = datetime.fromisoformat(first_timestamp.replace("Z", "+00:00"))
+                return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M:%S")
+            except Exception:
+                pass
+        return datetime.now().strftime("%Y-%m-%d"), ""
+
+    def _make_filename(self, date_str: str, session_id: str, ext: str, filename_label: Optional[str] = None) -> str:
+        """Build output filename. Uses filename_label if provided, otherwise session_id[:8]."""
+        label = filename_label if filename_label else session_id[:8]
+        return f"claude-conversation-{date_str}-{label}.{ext}"
+
+    def save_as_markdown(
+        self, conversation: List[Dict[str, str]], session_id: str,
+        filename_label: Optional[str] = None
+    ) -> Optional[Path]:
+        """Save conversation as clean markdown file."""
+        if not conversation:
+            return None
+
+        date_str, time_str = self._get_date_info(conversation)
+        filename = self._make_filename(date_str, session_id, "md", filename_label)
+        output_path = self.output_dir / filename
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("# Claude Conversation Log\n\n")
+            f.write(f"Session ID: {session_id}\n")
+            f.write(f"Date: {date_str}")
+            if time_str:
+                f.write(f" {time_str}")
+            f.write("\n\n---\n\n")
+
+            for msg in conversation:
+                role = msg["role"]
+                content = msg["content"]
+                
+                if role == "user":
+                    f.write("## 👤 User\n\n")
+                    f.write(f"{content}\n\n")
+                elif role == "assistant":
+                    f.write("## 🤖 Claude\n\n")
+                    f.write(f"{content}\n\n")
+                elif role == "tool_use":
+                    f.write("### 🔧 Tool Use\n\n")
+                    f.write(f"{content}\n\n")
+                elif role == "tool_result":
+                    f.write("### 📤 Tool Result\n\n")
+                    f.write(f"{content}\n\n")
+                elif role == "system":
+                    f.write("### ℹ️ System\n\n")
+                    f.write(f"{content}\n\n")
+                else:
+                    f.write(f"## {role}\n\n")
+                    f.write(f"{content}\n\n")
+                f.write("---\n\n")
+
+        return output_path
+    
+    def save_as_json(
+        self, conversation: List[Dict[str, str]], session_id: str,
+        filename_label: Optional[str] = None
+    ) -> Optional[Path]:
+        """Save conversation as JSON file."""
+        if not conversation:
+            return None
+
+        date_str, _ = self._get_date_info(conversation)
+        filename = self._make_filename(date_str, session_id, "json", filename_label)
+        output_path = self.output_dir / filename
+
+        # Create JSON structure
+        output = {
+            "session_id": session_id,
+            "date": date_str,
+            "message_count": len(conversation),
+            "messages": conversation
+        }
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(output, f, indent=2, ensure_ascii=False)
+
+        return output_path
+    
+    def save_as_html(
+        self, conversation: List[Dict[str, str]], session_id: str,
+        filename_label: Optional[str] = None
+    ) -> Optional[Path]:
+        """Save conversation as HTML file with syntax highlighting."""
+        if not conversation:
+            return None
+
+        date_str, time_str = self._get_date_info(conversation)
+        filename = self._make_filename(date_str, session_id, "html", filename_label)
+        output_path = self.output_dir / filename
+
+        # HTML template with modern styling
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Conversation - {session_id[:8]}</title>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }}
+        .header {{
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        h1 {{
+            color: #2c3e50;
+            margin: 0 0 10px 0;
+        }}
+        .metadata {{
+            color: #666;
+            font-size: 0.9em;
+        }}
+        .message {{
+            background: white;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .user {{
+            border-left: 4px solid #3498db;
+        }}
+        .assistant {{
+            border-left: 4px solid #2ecc71;
+        }}
+        .tool_use {{
+            border-left: 4px solid #f39c12;
+            background: #fffbf0;
+        }}
+        .tool_result {{
+            border-left: 4px solid #e74c3c;
+            background: #fff5f5;
+        }}
+        .system {{
+            border-left: 4px solid #95a5a6;
+            background: #f8f9fa;
+        }}
+        .role {{
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }}
+        .content {{
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }}
+        pre {{
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }}
+        code {{
+            background: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Claude Conversation Log</h1>
+        <div class="metadata">
+            <p>Session ID: {session_id}</p>
+            <p>Date: {date_str} {time_str}</p>
+            <p>Messages: {len(conversation)}</p>
+        </div>
+    </div>
+"""
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+            
+            for msg in conversation:
+                role = msg["role"]
+                content = msg["content"]
+                
+                # Escape HTML
+                content = content.replace("&", "&amp;")
+                content = content.replace("<", "&lt;")
+                content = content.replace(">", "&gt;")
+                
+                role_display = {
+                    "user": "👤 User",
+                    "assistant": "🤖 Claude",
+                    "tool_use": "🔧 Tool Use",
+                    "tool_result": "📤 Tool Result",
+                    "system": "ℹ️ System"
+                }.get(role, role)
+                
+                f.write(f'    <div class="message {role}">\n')
+                f.write(f'        <div class="role">{role_display}</div>\n')
+                f.write(f'        <div class="content">{content}</div>\n')
+                f.write(f'    </div>\n')
+            
+            f.write("\n</body>\n</html>")
+
+        return output_path
+
+    def save_conversation(
+        self, conversation: List[Dict[str, str]], session_id: str,
+        format: str = "markdown", filename_label: Optional[str] = None
+    ) -> Optional[Path]:
+        """Save conversation in the specified format.
+
+        Args:
+            conversation: The conversation data
+            session_id: Session identifier
+            format: Output format ('markdown', 'json', 'html')
+            filename_label: Optional label for filename (overrides default session_id[:8] truncation)
+        """
+        if format == "markdown":
+            return self.save_as_markdown(conversation, session_id, filename_label=filename_label)
+        elif format == "json":
+            return self.save_as_json(conversation, session_id, filename_label=filename_label)
+        elif format == "html":
+            return self.save_as_html(conversation, session_id, filename_label=filename_label)
+        else:
+            print(f"❌ Unsupported format: {format}")
+            return None
+
+    def get_conversation_preview(self, session_path: Path) -> Tuple[str, int]:
+        """Get a preview of the conversation's first real user message and message count."""
+        try:
+            first_user_msg = ""
+            msg_count = 0
+            
+            with open(session_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    msg_count += 1
+                    if not first_user_msg:
+                        try:
+                            data = json.loads(line)
+                            # Check for user message
+                            if data.get("type") == "user" and "message" in data:
+                                msg = data["message"]
+                                if msg.get("role") == "user":
+                                    content = msg.get("content", "")
+                                    
+                                    # Handle list content (common format in Claude JSONL)
+                                    if isinstance(content, list):
+                                        for item in content:
+                                            if isinstance(item, dict) and item.get("type") == "text":
+                                                text = item.get("text", "").strip()
+                                                
+                                                # Skip tool results
+                                                if text.startswith("tool_use_id"):
+                                                    continue
+                                                
+                                                # Skip interruption messages
+                                                if "[Request interrupted" in text:
+                                                    continue
+                                                
+                                                # Skip Claude's session continuation messages
+                                                if "session is being continued" in text.lower():
+                                                    continue
+                                                
+                                                # Remove XML-like tags (command messages, etc)
+                                                import re
+                                                text = re.sub(r'<[^>]+>', '', text).strip()
+                                                
+                                                # Skip command outputs  
+                                                if "is running" in text and "…" in text:
+                                                    continue
+                                                
+                                                # Handle image references - extract text after them
+                                                if text.startswith("[Image #"):
+                                                    parts = text.split("]", 1)
+                                                    if len(parts) > 1:
+                                                        text = parts[1].strip()
+                                                
+                                                # If we have real user text, use it
+                                                if text and len(text) > 3:  # Lower threshold to catch "hello"
+                                                    first_user_msg = text[:100].replace('\n', ' ')
+                                                    break
+                                    
+                                    # Handle string content (less common but possible)
+                                    elif isinstance(content, str):
+                                        import re
+                                        content = content.strip()
+                                        
+                                        # Remove XML-like tags
+                                        content = re.sub(r'<[^>]+>', '', content).strip()
+                                        
+                                        # Skip command outputs
+                                        if "is running" in content and "…" in content:
+                                            continue
+                                        
+                                        # Skip Claude's session continuation messages
+                                        if "session is being continued" in content.lower():
+                                            continue
+                                        
+                                        # Skip tool results and interruptions
+                                        if not content.startswith("tool_use_id") and "[Request interrupted" not in content:
+                                            if content and len(content) > 3:  # Lower threshold to catch short messages
+                                                first_user_msg = content[:100].replace('\n', ' ')
+                        except json.JSONDecodeError:
+                            continue
+                            
+            return first_user_msg or "No preview available", msg_count
+        except Exception as e:
+            return f"Error: {str(e)[:30]}", 0
+
+    def list_recent_sessions(self, limit: int = None) -> List[Path]:
+        """List recent sessions with details."""
+        sessions = self.find_sessions()
+
+        if not sessions:
+            print("❌ No Claude sessions found in ~/.claude/projects/")
+            print("💡 Make sure you've used Claude Code and have conversations saved.")
+            return []
+
+        print(f"\n📚 Found {len(sessions)} Claude sessions:\n")
+        print("=" * 80)
+
+        # Show all sessions if no limit specified
+        sessions_to_show = sessions[:limit] if limit else sessions
+        for i, session in enumerate(sessions_to_show, 1):
+            # Clean up project name (remove hyphens, make readable)
+            project = session.parent.name.replace('-', ' ').strip()
+            if project.startswith("Users"):
+                project = "~/" + "/".join(project.split()[2:]) if len(project.split()) > 2 else "Home"
+            
+            session_id = session.stem
+            modified = datetime.fromtimestamp(session.stat().st_mtime)
+
+            # Get file size
+            size = session.stat().st_size
+            size_kb = size / 1024
+            
+            # Get preview and message count
+            preview, msg_count = self.get_conversation_preview(session)
+
+            # Check for subagents
+            subagents = self.find_subagents(session)
+            subagent_info = f"   🤖 Subagents: {len(subagents)}" if subagents else ""
+
+            # Print formatted info
+            print(f"\n{i}. 📁 {project}")
+            print(f"   📄 Session: {session_id[:8]}...")
+            print(f"   📅 Modified: {modified.strftime('%Y-%m-%d %H:%M')}")
+            print(f"   💬 Messages: {msg_count}")
+            print(f"   💾 Size: {size_kb:.1f} KB")
+            if subagent_info:
+                print(subagent_info)
+            print(f"   📝 Preview: \"{preview}...\"")
+
+        print("\n" + "=" * 80)
+        return sessions[:limit]
+
+    def extract_multiple(
+        self, sessions: List[Path], indices: List[int], 
+        format: str = "markdown", detailed: bool = False
+    ) -> Tuple[int, int]:
+        """Extract multiple sessions by index.
+        
+        Args:
+            sessions: List of session paths
+            indices: Indices to extract
+            format: Output format ('markdown', 'json', 'html')
+            detailed: If True, include tool use and system messages
+        """
+        success = 0
+        total = len(indices)
+
+        for idx in indices:
+            if 0 <= idx < len(sessions):
+                session_path = sessions[idx]
+                conversation = self.extract_conversation(session_path, detailed=detailed)
+                if conversation:
+                    output_path = self.save_conversation(conversation, session_path.stem, format=format)
+                    success += 1
+                    msg_count = len(conversation)
+                    print(
+                        f"✅ {success}/{total}: {output_path.name} "
+                        f"({msg_count} messages)"
+                    )
+                else:
+                    print(f"⏭️  Skipped session {idx + 1} (no conversation)")
+            else:
+                print(f"❌ Invalid session number: {idx + 1}")
+
+        return success, total
+
+    def extract_session_with_subagents(
+        self, session_path: Path, format: str = "markdown", detailed: bool = False
+    ) -> int:
+        """Extract a session and all its subagent conversations.
+
+        Produces one file for the main session and one file per subagent.
+
+        Args:
+            session_path: Path to the main session JSONL
+            format: Output format ('markdown', 'json', 'html')
+            detailed: If True, include tool use and system messages
+
+        Returns:
+            Number of files successfully saved
+        """
+        session_id = session_path.stem
+        saved = 0
+
+        # 1. Extract main session
+        print(f"\n📄 Main session: {session_id}")
+        conversation = self.extract_conversation(session_path, detailed=detailed)
+        if conversation:
+            output_path = self.save_conversation(conversation, session_id, format=format)
+            if output_path:
+                print(f"   ✅ {output_path.name} ({len(conversation)} messages)")
+                saved += 1
+        else:
+            print(f"   ⏭️  No conversation content")
+
+        # 2. Find and extract subagents
+        subagents = self.find_subagents(session_path)
+        if subagents:
+            print(f"\n🤖 Found {len(subagents)} subagent(s):")
+            for agent_path, meta in subagents:
+                agent_id = agent_path.stem
+                agent_type = meta.get("agentType", "unknown")
+                agent_desc = meta.get("description", "")
+                print(f"\n   📄 {agent_id}")
+                print(f"      Type: {agent_type}")
+                if agent_desc:
+                    print(f"      Desc: {agent_desc}")
+
+                agent_conv = self.extract_conversation(agent_path, detailed=detailed)
+                if agent_conv:
+                    # Build a descriptive filename label:
+                    # e.g. "1a338b42-sub-agent-a313b2b0c0d57b65d"
+                    label = f"{session_id[:8]}-sub-{agent_id}"
+                    agent_output = self.save_conversation(
+                        agent_conv,
+                        agent_id,  # session_id stored inside the file
+                        format=format,
+                        filename_label=label,
+                    )
+                    if agent_output:
+                        print(f"      ✅ {agent_output.name} ({len(agent_conv)} messages)")
+                        saved += 1
+                else:
+                    print(f"      ⏭️  No conversation content")
+        else:
+            print(f"\n   (No subagents found for this session)")
+
+        return saved
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Extract Claude Code conversations to clean markdown files",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s --list                    # List all available sessions
+  %(prog)s --extract 1               # Extract the most recent session (by list number)
+  %(prog)s --extract 1,3,5           # Extract specific sessions by number
+  %(prog)s --extract 724a8e2f        # Extract session by ID prefix (+ subagents)
+  %(prog)s --recent 5                # Extract 5 most recent sessions
+  %(prog)s --all                     # Extract all sessions
+  %(prog)s --output ~/my-logs        # Specify output directory
+  %(prog)s --search "python error"   # Search conversations
+  %(prog)s --search-regex "import.*" # Search with regex
+  %(prog)s --format json --all       # Export all as JSON
+  %(prog)s --format html --extract 1 # Export session 1 as HTML
+  %(prog)s --detailed --extract 1    # Include tool use & system messages
+        """,
+    )
+    parser.add_argument("--list", action="store_true", help="List recent sessions")
+    parser.add_argument(
+        "--extract",
+        type=str,
+        help="Extract session(s): by list number (e.g. 1,3,5) or by session ID prefix (e.g. 724a8e2f). "
+             "When using session ID prefix, subagent conversations are automatically included.",
+    )
+    parser.add_argument(
+        "--all", "--logs", action="store_true", help="Extract all sessions"
+    )
+    parser.add_argument(
+        "--recent", type=int, help="Extract N most recent sessions", default=0
+    )
+    parser.add_argument(
+        "--output", type=str, help="Output directory for markdown files"
+    )
+    parser.add_argument(
+        "--limit", type=int, help="Limit for --list command (default: show all)", default=None
+    )
+    parser.add_argument(
+        "--interactive",
+        "-i",
+        "--start",
+        "-s",
+        action="store_true",
+        help="Launch interactive UI for easy extraction",
+    )
+    parser.add_argument(
+        "--export",
+        type=str,
+        help="Export mode: 'logs' for interactive UI",
+    )
+
+    # Search arguments
+    parser.add_argument(
+        "--search", type=str, help="Search conversations for text (smart search)"
+    )
+    parser.add_argument(
+        "--search-regex", type=str, help="Search conversations using regex pattern"
+    )
+    parser.add_argument(
+        "--search-date-from", type=str, help="Filter search from date (YYYY-MM-DD)"
+    )
+    parser.add_argument(
+        "--search-date-to", type=str, help="Filter search to date (YYYY-MM-DD)"
+    )
+    parser.add_argument(
+        "--search-speaker",
+        choices=["human", "assistant", "both"],
+        default="both",
+        help="Filter search by speaker",
+    )
+    parser.add_argument(
+        "--case-sensitive", action="store_true", help="Make search case-sensitive"
+    )
+    
+    # Export format arguments
+    parser.add_argument(
+        "--format",
+        choices=["markdown", "json", "html"],
+        default="markdown",
+        help="Output format for exported conversations (default: markdown)"
+    )
+    parser.add_argument(
+        "--detailed",
+        action="store_true",
+        help="Include tool use, MCP responses, and system messages in export"
+    )
+
+    args = parser.parse_args()
+
+    # Handle interactive mode
+    if args.interactive or (args.export and args.export.lower() == "logs"):
+        from interactive_ui import main as interactive_main
+
+        interactive_main()
+        return
+
+    # Initialize extractor with optional output directory
+    extractor = ClaudeConversationExtractor(args.output)
+
+    # Handle search mode
+    if args.search or args.search_regex:
+        from datetime import datetime
+
+        from search_conversations import ConversationSearcher
+
+        searcher = ConversationSearcher()
+
+        # Determine search mode and query
+        if args.search_regex:
+            query = args.search_regex
+            mode = "regex"
+        else:
+            query = args.search
+            mode = "smart"
+
+        # Parse date filters
+        date_from = None
+        date_to = None
+        if args.search_date_from:
+            try:
+                date_from = datetime.strptime(args.search_date_from, "%Y-%m-%d")
+            except ValueError:
+                print(f"❌ Invalid date format: {args.search_date_from}")
+                return
+
+        if args.search_date_to:
+            try:
+                date_to = datetime.strptime(args.search_date_to, "%Y-%m-%d")
+            except ValueError:
+                print(f"❌ Invalid date format: {args.search_date_to}")
+                return
+
+        # Speaker filter
+        speaker_filter = None if args.search_speaker == "both" else args.search_speaker
+
+        # Perform search
+        print(f"🔍 Searching for: {query}")
+        results = searcher.search(
+            query=query,
+            mode=mode,
+            date_from=date_from,
+            date_to=date_to,
+            speaker_filter=speaker_filter,
+            case_sensitive=args.case_sensitive,
+            max_results=30,
+        )
+
+        if not results:
+            print("❌ No matches found.")
+            return
+
+        print(f"\n✅ Found {len(results)} matches across conversations:")
+
+        # Group and display results
+        results_by_file = {}
+        for result in results:
+            if result.file_path not in results_by_file:
+                results_by_file[result.file_path] = []
+            results_by_file[result.file_path].append(result)
+
+        # Store file paths for potential viewing
+        file_paths_list = []
+        for file_path, file_results in results_by_file.items():
+            file_paths_list.append(file_path)
+            print(f"\n{len(file_paths_list)}. 📄 {file_path.parent.name} ({len(file_results)} matches)")
+            # Show first match preview
+            first = file_results[0]
+            print(f"   {first.speaker}: {first.matched_content[:100]}...")
+
+        # Offer to view conversations
+        if file_paths_list:
+            print("\n" + "=" * 60)
+            try:
+                view_choice = input("\nView a conversation? Enter number (1-{}) or press Enter to skip: ".format(
+                    len(file_paths_list))).strip()
+                
+                if view_choice.isdigit():
+                    view_num = int(view_choice)
+                    if 1 <= view_num <= len(file_paths_list):
+                        selected_path = file_paths_list[view_num - 1]
+                        extractor.display_conversation(selected_path, detailed=args.detailed)
+                        
+                        # Offer to extract after viewing
+                        extract_choice = input("\n📤 Extract this conversation? (y/N): ").strip().lower()
+                        if extract_choice == 'y':
+                            conversation = extractor.extract_conversation(selected_path, detailed=args.detailed)
+                            if conversation:
+                                session_id = selected_path.stem
+                                if args.format == "json":
+                                    output = extractor.save_as_json(conversation, session_id)
+                                elif args.format == "html":
+                                    output = extractor.save_as_html(conversation, session_id)
+                                else:
+                                    output = extractor.save_as_markdown(conversation, session_id)
+                                print(f"✅ Saved: {output.name}")
+            except (EOFError, KeyboardInterrupt):
+                print("\n👋 Cancelled")
+        
+        return
+
+    # Default action is to list sessions
+    if args.list or (
+        not args.extract
+        and not args.all
+        and not args.recent
+        and not args.search
+        and not args.search_regex
+    ):
+        sessions = extractor.list_recent_sessions(args.limit)
+
+        if sessions and not args.list:
+            print("\nTo extract conversations:")
+            print("  claude-extract --extract <number>      # Extract by list number")
+            print("  claude-extract --extract <session_id>  # Extract by session ID prefix (+ subagents)")
+            print("  claude-extract --recent 5              # Extract 5 most recent")
+            print("  claude-extract --all                   # Extract all sessions")
+
+    elif args.extract:
+        extract_arg = args.extract.strip()
+
+        # Strategy: try session ID prefix match first. If the argument is
+        # >= 7 chars or contains non-digit characters, it's almost certainly
+        # a session ID prefix. But even pure-digit strings like "16552058"
+        # can be valid UUID prefixes, so we always attempt a prefix lookup
+        # first, then fall back to numeric index interpretation.
+        #
+        # Comma-separated values (e.g. "1,3,5") are always numeric indices.
+
+        is_comma_list = "," in extract_arg
+        session_path = None
+
+        if not is_comma_list and len(extract_arg) >= 7:
+            # Only attempt session ID prefix match for inputs >= 7 chars.
+            # Shorter values (like "3" or "12") are treated as list numbers.
+            # Session ID prefixes need at least 7 chars to be unambiguous.
+            session_path = extractor.find_session_by_id(extract_arg, quiet=True)
+
+        if session_path:
+            # ── Session ID prefix mode: extract session + all subagents ──
+            print(f"\n📤 Extracting session {session_path.stem[:8]}... (+ subagents) as {args.format.upper()}...")
+            if args.detailed:
+                print("📋 Including detailed tool use and system messages")
+            saved = extractor.extract_session_with_subagents(
+                session_path, format=args.format, detailed=args.detailed
+            )
+            print(f"\n✅ Successfully saved {saved} file(s)")
+        else:
+            # ── Numeric index mode ──
+            sessions = extractor.find_sessions()
+
+            indices = []
+            for num in extract_arg.split(","):
+                try:
+                    idx = int(num.strip()) - 1  # Convert to 0-based index
+                    indices.append(idx)
+                except ValueError:
+                    print(f"❌ Invalid argument: {num} (not a list number or session ID prefix)")
+                    continue
+
+            if indices:
+                print(f"\n📤 Extracting {len(indices)} session(s) as {args.format.upper()}...")
+                if args.detailed:
+                    print("📋 Including detailed tool use and system messages")
+                success, total = extractor.extract_multiple(
+                    sessions, indices, format=args.format, detailed=args.detailed
+                )
+                print(f"\n✅ Successfully extracted {success}/{total} sessions")
+
+    elif args.recent:
+        sessions = extractor.find_sessions()
+        limit = min(args.recent, len(sessions))
+        print(f"\n📤 Extracting {limit} most recent sessions as {args.format.upper()}...")
+        if args.detailed:
+            print("📋 Including detailed tool use and system messages")
+
+        indices = list(range(limit))
+        success, total = extractor.extract_multiple(
+            sessions, indices, format=args.format, detailed=args.detailed
+        )
+        print(f"\n✅ Successfully extracted {success}/{total} sessions")
+
+    elif args.all:
+        sessions = extractor.find_sessions()
+        print(f"\n📤 Extracting all {len(sessions)} sessions as {args.format.upper()}...")
+        if args.detailed:
+            print("📋 Including detailed tool use and system messages")
+
+        indices = list(range(len(sessions)))
+        success, total = extractor.extract_multiple(
+            sessions, indices, format=args.format, detailed=args.detailed
+        )
+        print(f"\n✅ Successfully extracted {success}/{total} sessions")
+
+
+def launch_interactive():
+    """Launch the interactive UI directly, or handle search if specified."""
+    import sys
+    
+    # If no arguments provided, launch interactive UI
+    if len(sys.argv) == 1:
+        try:
+            from .interactive_ui import main as interactive_main
+        except ImportError:
+            from interactive_ui import main as interactive_main
+        interactive_main()
+    # Check if 'search' was passed as an argument
+    elif len(sys.argv) > 1 and sys.argv[1] == 'search':
+        # Launch real-time search with viewing capability
+        try:
+            from .realtime_search import RealTimeSearch, create_smart_searcher
+            from .search_conversations import ConversationSearcher
+        except ImportError:
+            from realtime_search import RealTimeSearch, create_smart_searcher
+            from search_conversations import ConversationSearcher
+        
+        # Initialize components
+        extractor = ClaudeConversationExtractor()
+        searcher = ConversationSearcher()
+        smart_searcher = create_smart_searcher(searcher)
+        
+        # Run search
+        rts = RealTimeSearch(smart_searcher, extractor)
+        selected_file = rts.run()
+        
+        if selected_file:
+            # View the selected conversation
+            extractor.display_conversation(selected_file)
+            
+            # Offer to extract
+            try:
+                extract_choice = input("\n📤 Extract this conversation? (y/N): ").strip().lower()
+                if extract_choice == 'y':
+                    conversation = extractor.extract_conversation(selected_file)
+                    if conversation:
+                        session_id = selected_file.stem
+                        output = extractor.save_as_markdown(conversation, session_id)
+                        print(f"✅ Saved: {output.name}")
+            except (EOFError, KeyboardInterrupt):
+                print("\n👋 Cancelled")
+    else:
+        # If other arguments are provided, run the normal CLI
+        main()
+
+
+if __name__ == "__main__":
+    main()
+</file>
+
+<file path="pyproject.toml">
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claude-conversation-extractor"
+version = "1.1.2"
+description = "Export Claude Code conversations from ~/.claude/projects. Extract, search, and backup Claude chat history to markdown files."
+readme = "README.md"
+authors = [
+    {name = "Dustin Kirby"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup :: Markdown",
+    "Topic :: Communications :: Chat",
+    "Topic :: System :: Archiving :: Backup",
+    "Topic :: Utilities",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Natural Language :: English",
+]
+keywords = [
+    "export-claude-code-conversations", "claude-conversation-extractor",
+    "claude-code-export-tool", "backup-claude-code-logs", "save-claude-chat-history",
+    "claude-jsonl-to-markdown", "extract-claude-sessions", "claude-code-no-export-button",
+    "where-are-claude-code-logs-stored", "claude-terminal-logs", "anthropic-claude-code",
+    "search-claude-conversations", "claude-code-logs-location", "~/.claude/projects",
+    "export-claude-conversations", "extract-claude-code", "backup-claude-sessions"
+]
+requires-python = ">=3.8"
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ZeroSumQuant/claude-conversation-extractor"
+Documentation = "https://github.com/ZeroSumQuant/claude-conversation-extractor#readme"
+Repository = "https://github.com/ZeroSumQuant/claude-conversation-extractor"
+Issues = "https://github.com/ZeroSumQuant/claude-conversation-extractor/issues"
+
+[project.scripts]
+claude-extract = "extract_claude_logs:launch_interactive"
+claude-logs = "extract_claude_logs:launch_interactive"
+claude-start = "extract_claude_logs:launch_interactive"
+claude-search = "search_cli:main"
+
+[tool.setuptools]
+py-modules = ["extract_claude_logs", "interactive_ui", "search_conversations", "realtime_search", "search_cli"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests*"]
+</file>
+
+<file path="README.md">
+# Claude Conversation Extractor - Export Claude Code Conversations to Markdown | Save Chat History
+
+> 🚀 **The ONLY tool to export Claude Code conversations**. Extract Claude chat history from ~/.claude/projects, search through logs, and backup your AI programming sessions.
+
+## 🎮 Two Ways to Use
+
+- **`claude-start`** - Interactive UI with ASCII art logo, real-time search, and menu-driven interface (recommended)
+- **`claude-extract`** - Plain CLI for command-line operations and scripting
+
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI version](https://badge.fury.io/py/claude-conversation-extractor.svg)](https://badge.fury.io/py/claude-conversation-extractor)
+[![Downloads](https://pepy.tech/badge/claude-conversation-extractor)](https://pepy.tech/project/claude-conversation-extractor)
+[![GitHub stars](https://img.shields.io/github/stars/ZeroSumQuant/claude-conversation-extractor?style=social)](https://github.com/ZeroSumQuant/claude-conversation-extractor)
+[![Export Claude Code](https://img.shields.io/badge/Export-Claude%20Code%20Conversations-blue)](https://github.com/ZeroSumQuant/claude-conversation-extractor)
+[![Claude Code Logs](https://img.shields.io/badge/Backup-Claude%20Code%20Logs-green)](https://github.com/ZeroSumQuant/claude-conversation-extractor)
+
+**Export Claude Code conversations with the #1 extraction tool.** Claude Code stores chats in ~/.claude/projects as JSONL files with no export button - this tool solves that.
+
+🔥 **What users search for:** [Export Claude conversations](#how-to-export-claude-code-conversations) | [Claude Code logs location](#where-are-claude-code-logs-stored) | [Backup Claude sessions](#backup-all-claude-conversations) | [Claude JSONL to Markdown](#convert-claude-jsonl-to-markdown)
+
+## 📸 How to Export Claude Code Conversations - Demo
+
+![Export Claude Code conversations demo - Claude Conversation Extractor in action](https://raw.githubusercontent.com/ZeroSumQuant/claude-conversation-extractor/main/assets/demo.gif)
+
+## 🎯 Can't Export Claude Code Conversations? We Solved It.
+
+**Claude Code has no export button.** Your conversations are trapped in `~/.claude/projects/` as undocumented JSONL files. You need:
+- ❌ **Export Claude Code conversations** before they're deleted
+- ❌ **Search Claude Code chat history** to find that solution from last week
+- ❌ **Backup Claude Code logs** for documentation or sharing
+- ❌ **Convert Claude JSONL to Markdown** for readable archives
+
+## ✅ Claude Conversation Extractor: The First Export Tool for Claude Code
+
+This is the **ONLY tool that exports Claude Code conversations**:
+- ✅ **Finds Claude Code logs** automatically in ~/.claude/projects
+- ✅ **Extracts Claude conversations** to clean Markdown files
+- ✅ **Searches Claude chat history** with real-time results
+- ✅ **Backs up all Claude sessions** with one command
+- ✅ **Works on Windows, macOS, Linux** - wherever Claude Code runs
+
+## ✨ Features for Claude Code Users
+
+- **🔍 Real-Time Search**: Search Claude conversations as you type - no flags needed
+- **📝 Claude JSONL to Markdown**: Clean export without terminal artifacts
+- **⚡ Find Any Chat**: Search by content, date, or conversation name
+- **📦 Bulk Export**: Extract all Claude Code conversations at once
+- **🎯 Zero Config**: Just run `claude-extract` - we find everything automatically
+- **🚀 No Dependencies**: Pure Python - no external packages required
+- **🖥️ Cross-Platform**: Export Claude Code logs on any OS
+- **📊 97% Test Coverage**: Reliable extraction you can trust
+
+## 📦 Install Claude Conversation Extractor
+
+### Quick Install (Recommended)
+
+```bash
+# Using pipx (solves Python environment issues)
+pipx install claude-conversation-extractor
+
+# OR using pip
+pip install claude-conversation-extractor
+```
+
+### Platform-Specific Setup
+
+<details>
+<summary>macOS</summary>
+
+```bash
+# Install pipx first
+brew install pipx
+pipx ensurepath
+
+# Then install the extractor
+pipx install claude-conversation-extractor
+```
+</details>
+
+<details>
+<summary>Windows</summary>
+
+```bash
+# Install pipx
+py -m pip install --user pipx
+py -m pipx ensurepath
+# Restart terminal, then:
+
+# Install the extractor
+pipx install claude-conversation-extractor
+```
+</details>
+
+<details>
+<summary>Linux</summary>
+
+```bash
+# Ubuntu/Debian
+sudo apt install pipx
+pipx ensurepath
+
+# Install the extractor
+pipx install claude-conversation-extractor
+```
+</details>
+
+## 🚀 How to Export Claude Code Conversations
+
+### Quick Start - Export Claude Conversations
+```bash
+# Run the interactive UI with ASCII art logo and real-time search
+claude-start
+
+# Run the standard CLI interface
+claude-extract
+
+# Search for specific content directly
+claude-search "API integration"
+
+# Note: claude-logs also works for backward compatibility
+```
+
+That's it! The tool will:
+1. Find your Claude Code conversations in ~/.claude/projects
+2. Show an interactive menu to search or export
+3. Convert Claude JSONL files to readable Markdown, JSON, or HTML
+
+### Export Claude Code Logs - All Methods
+
+```bash
+# Interactive mode with UI - easiest way to export Claude conversations
+claude-start
+
+# CLI mode - command-line interface
+claude-extract
+
+# List all Claude Code conversations
+claude-extract --list
+
+# Export specific Claude chats by number
+claude-extract --extract 1,3,5
+
+# Export recent Claude Code sessions
+claude-extract --recent 5
+
+# Backup all Claude conversations at once
+claude-extract --all
+
+# Save Claude logs to custom location
+claude-extract --output ~/my-claude-backups
+```
+
+### 📄 Export Formats - NEW in v1.1.1!
+
+Export conversations in multiple formats:
+
+```bash
+# Export as JSON for programmatic processing
+claude-extract --format json --extract 1
+
+# Export as HTML with beautiful formatting
+claude-extract --format html --all
+
+# Include tool use, MCP responses, and system messages
+claude-extract --detailed --extract 1
+
+# Combine options for complete exports
+claude-extract --format html --detailed --recent 5
+```
+
+**Supported Formats:**
+- **Markdown** (default) - Clean, readable text format
+- **JSON** - Structured data for analysis and processing
+- **HTML** - Beautiful web-viewable format with syntax highlighting
+
+**Detailed Mode (`--detailed`):**
+Includes complete conversation transcript with:
+- Tool use invocations and parameters
+- MCP server responses
+- System messages and errors
+- Terminal command outputs
+- All metadata from the conversation
+
+### 🔍 Search Claude Code Chat History
+
+Search across all your Claude conversations:
+
+```bash
+# Method 1: Direct search command
+claude-search                    # Prompts for search term
+claude-search "zig build"        # Search for specific term
+claude-search "error handling"   # Multi-word search
+
+# Method 2: From interactive menu
+claude-extract
+# Select "Search conversations" for real-time search
+```
+
+**Search features:**
+- Fast full-text search across all conversations
+- Case-insensitive by default
+- Finds exact matches, partial matches, and patterns
+- Shows match previews and conversation context
+- Option to extract matching sessions directly
+
+## 📁 Where Are Claude Code Logs Stored?
+
+### Claude Code Default Locations:
+- **macOS/Linux**: `~/.claude/projects/*/chat_*.jsonl`
+- **Windows**: `%USERPROFILE%\.claude\projects\*\chat_*.jsonl`
+- **Format**: Undocumented JSONL with base64 encoded content
+
+### Exported Claude Conversation Locations:
+```text
+~/Desktop/Claude logs/claude-conversation-2025-06-09-abc123.md
+├── Metadata (session ID, timestamp)
+├── User messages with 👤 prefix
+├── Claude responses with 🤖 prefix
+└── Clean Markdown formatting
+```
+
+## ❓ Frequently Asked Questions
+
+### How do I export Claude Code conversations?
+Install with `pipx install claude-conversation-extractor` then run `claude-extract`. The tool automatically finds all conversations in ~/.claude/projects.
+
+### How do I export the detailed transcript with tool use?
+Use the `--detailed` flag to include tool invocations, MCP responses, terminal outputs, and system messages:
+```bash
+claude-extract --detailed --format html --extract 1
+```
+This gives you the complete conversation as seen in Claude's Ctrl+R view.
+
+### Where does Claude Code store conversations?
+Claude Code saves all chats in `~/.claude/projects/` as JSONL files. There's no built-in export feature - that's why this tool exists.
+
+### Can I search my Claude Code history?
+Yes! Run `claude-search` or select "Search conversations" from the menu. Type anything and see results instantly.
+
+### How to backup all Claude Code sessions?
+Run `claude-extract --all` to export every conversation at once, or use the interactive menu option "Export all conversations".
+
+### Does this work with Claude.ai (web version)?
+No, this tool specifically exports Claude Code (desktop app) conversations. Claude.ai has its own export feature in settings.
+
+### Can I convert Claude JSONL to other formats?
+Yes! Version 1.1.1 supports multiple export formats:
+- **Markdown** - Default clean text format
+- **JSON** - Structured data with timestamps and metadata  
+- **HTML** - Beautiful web-viewable format with modern styling
+Use `--format json` or `--format html` when extracting.
+
+### Is this tool official?
+No, this is an independent open-source tool. It reads the local Claude Code files on your computer - no API or internet required.
+
+## 📊 Why This is the Best Claude Code Export Tool
+
+| Feature | Claude Conversation Extractor | Manual Copy | Claude.ai Export |
+|---------|------------------------------|-------------|------------------|
+| Works with Claude Code | ✅ Full support | ✅ Tedious | ❌ Different product |
+| Bulk export | ✅ All conversations | ❌ One at a time | ❌ N/A |
+| Search capability | ✅ Real-time search | ❌ None | ❌ N/A |
+| Clean formatting | ✅ Perfect Markdown | ❌ Terminal artifacts | ❌ N/A |
+| Zero configuration | ✅ Auto-detects | ❌ Manual process | ❌ N/A |
+| Cross-platform | ✅ Win/Mac/Linux | ✅ Manual works | ❌ N/A |
+
+## 🔧 Technical Details
+
+### How Claude Conversation Extractor Works
+
+1. **Locates Claude Code logs**: Scans ~/.claude/projects for JSONL files
+2. **Parses undocumented format**: Handles Claude's internal data structure
+3. **Extracts conversations**: Preserves user inputs and Claude responses
+4. **Converts to Markdown**: Clean format without terminal escape codes
+5. **Enables search**: Indexes content for instant searching
+
+### Requirements
+- Python 3.8+ (works with 3.9, 3.10, 3.11, 3.12)
+- Claude Code installed with existing conversations
+- No external dependencies for core features
+
+### Optional: Advanced Search with spaCy
+```bash
+# For semantic search capabilities
+pip install spacy
+python -m spacy download en_core_web_sm
+```
+
+## 🤝 Contributing
+
+Help make the best Claude Code export tool even better! See [CONTRIBUTING.md](docs/development/CONTRIBUTING.md).
+
+### Development Setup
+```bash
+# Clone the repo
+git clone https://github.com/ZeroSumQuant/claude-conversation-extractor.git
+cd claude-conversation-extractor
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dev dependencies
+pip install -r requirements-dev.txt
+
+# Run tests
+pytest
+```
+
+## 🐛 Troubleshooting Claude Export Issues
+
+### Can't find Claude Code conversations?
+- Ensure Claude Code has been used at least once
+- Check `~/.claude/projects/` exists and has .jsonl files
+- Verify read permissions on the directory
+- Try `ls -la ~/.claude/projects/` to see if files exist
+
+### "No Claude sessions found" error
+- Claude Code must be installed and used before exporting
+- Check the correct user directory is being scanned
+- Ensure you're running the tool as the same user who uses Claude Code
+
+### Installation issues?
+See [INSTALL.md](docs/user/INSTALL.md) for:
+- Fixing "externally managed environment" errors
+- PATH configuration help
+- Platform-specific troubleshooting
+
+## 🔒 Privacy & Security
+
+- ✅ **100% Local**: Never sends your Claude conversations anywhere
+- ✅ **No Internet**: Works completely offline
+- ✅ **No Tracking**: Zero telemetry or analytics
+- ✅ **Open Source**: Audit the code yourself
+- ✅ **Read-Only**: Never modifies your Claude Code files
+
+## 📈 Roadmap for Claude Code Export Tool
+
+### ✅ Completed in v1.1.1
+- [x] Export Claude Code conversations to Markdown
+- [x] Real-time search for Claude chat history  
+- [x] Bulk export all Claude sessions
+- [x] Export to JSON format with metadata
+- [x] Export to HTML with beautiful formatting
+- [x] Detailed transcript mode with tool use/MCP responses
+- [x] Direct search command (`claude-search`)
+
+### 🚧 Planned Features
+- [ ] Export to PDF format
+- [ ] Automated daily backups of Claude conversations
+- [ ] Integration with Obsidian, Notion, Roam
+- [ ] Watch mode for auto-export of new conversations
+- [ ] Filter by date range (--after, --before flags)
+- [ ] Export statistics and analytics dashboard
+
+## ⚖️ Legal Disclaimer
+
+This tool accesses Claude Code conversation data stored locally in ~/.claude/projects on your computer. You are accessing your own data. This is an independent project not affiliated with Anthropic. Use responsibly and in accordance with Claude's terms of service.
+
+## 📜 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## 🙏 Support the Project
+
+If this tool helps you export Claude Code conversations:
+- ⭐ Star this repo to help others find it
+- 🐛 Report issues if you find bugs
+- 💡 Suggest features you'd like to see
+- 📣 Share with other Claude Code users
+
+---
+
+**Keywords**: export claude code conversations, claude conversation extractor, claude code export tool, backup claude code logs, save claude chat history, claude jsonl to markdown, ~/.claude/projects, extract claude sessions, claude code no export button, where are claude code logs stored, claude terminal logs, anthropic claude code export
+
+**Note**: This is an independent tool for exporting Claude Code conversations. Not affiliated with Anthropic.
+</file>
+
+<file path="setup.py">
+#!/usr/bin/env python3
+"""Setup script for Claude Conversation Extractor"""
+
+import atexit
+from pathlib import Path
+
+from setuptools import setup
+from setuptools.command.install import install
+
+
+class PostInstallCommand(install):
+    """Post-installation for installation mode."""
+
+    def run(self):
+        install.run(self)
+
+        # Print helpful messages after installation
+        def print_success_message():
+            print("\n🎉 Installation complete!")
+            print("\n📋 Quick Start Commands:")
+            print("  claude-start         # Interactive UI with logo & real-time search")
+            print("  claude-extract       # CLI for extraction & searching")
+            print("  claude-search        # Search and view conversations")
+            print("\n⭐ If you find this tool helpful, please star us on GitHub:")
+            print("   https://github.com/ZeroSumQuant/claude-conversation-extractor")
+            print("\nThank you for using Claude Conversation Extractor! 🚀\n")
+
+        # Register to run after pip finishes
+        atexit.register(print_success_message)
+
+
+# Read the README for long description
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text(encoding="utf-8")
+
+setup(
+    name="claude-conversation-extractor",
+    version="1.1.2",
+    author="Dustin Kirby",
+    author_email="",  # Contact via GitHub
+    description=(
+        "Export Claude Code conversations from ~/.claude/projects. "
+        "Extract, search, and backup Claude chat history to markdown files."
+    ),
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/ZeroSumQuant/claude-conversation-extractor",
+    project_urls={
+        "Bug Tracker": (
+            "https://github.com/ZeroSumQuant/claude-conversation-extractor/issues"
+        ),
+        "Documentation": (
+            "https://github.com/ZeroSumQuant/claude-conversation-extractor#readme"
+        ),
+        "Source": "https://github.com/ZeroSumQuant/claude-conversation-extractor",
+    },
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "Intended Audience :: End Users/Desktop",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Text Processing :: Markup :: Markdown",
+        "Topic :: Communications :: Chat",
+        "Topic :: System :: Archiving :: Backup",
+        "Topic :: Utilities",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Operating System :: OS Independent",
+        "Environment :: Console",
+    ],
+    python_requires=">=3.8",
+    package_dir={"": "src"},
+    py_modules=[
+        "extract_claude_logs",
+        "interactive_ui",
+        "search_conversations",
+        "realtime_search",
+        "search_cli",
+    ],
+    entry_points={
+        "console_scripts": [
+            "claude-extract=extract_claude_logs:launch_interactive",  # Primary command
+            "claude-logs=extract_claude_logs:launch_interactive",     # Kept for backward compatibility
+            "claude-start=extract_claude_logs:launch_interactive",    # Alternative alias
+            "claude-search=search_cli:main",                          # Direct search command
+        ],
+    },
+    cmdclass={
+        "install": PostInstallCommand,
+    },
+    install_requires=[],  # No dependencies!
+    keywords=(
+        "export-claude-code-conversations claude-conversation-extractor "
+        "claude-code-export-tool backup-claude-code-logs save-claude-chat-history "
+        "claude-jsonl-to-markdown extract-claude-sessions claude-code-no-export-button "
+        "where-are-claude-code-logs-stored claude-terminal-logs anthropic-claude-code "
+        "search-claude-conversations claude-code-logs-location ~/.claude/projects "
+        "export-claude-conversations extract-claude-code backup-claude-sessions"
+    ),
+)
+</file>
+
+</files>

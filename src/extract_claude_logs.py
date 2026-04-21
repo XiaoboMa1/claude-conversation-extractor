@@ -27,7 +27,6 @@ class ClaudeConversationExtractor:
         else:
             # Try multiple possible output directories
             possible_dirs = [
-                Path.home() / "Desktop" / "Claude logs",
                 Path.home() / "Documents" / "Claude logs",
                 Path.home() / "Claude logs",
                 Path.cwd() / "claude-logs",
@@ -839,11 +838,13 @@ Examples:
         """,
     )
     parser.add_argument("--list", action="store_true", help="List recent sessions")
+    
     parser.add_argument(
+        "-e",
         "--extract",
         type=str,
         help="Extract session(s): by list number (e.g. 1,3,5) or by session ID prefix (e.g. 724a8e2f). "
-             "When using session ID prefix, subagent conversations are automatically included.",
+        "When using session ID prefix, subagent conversations are automatically included.",
     )
     parser.add_argument(
         "--all", "--logs", action="store_true", help="Extract all sessions"
@@ -851,9 +852,14 @@ Examples:
     parser.add_argument(
         "--recent", type=int, help="Extract N most recent sessions", default=0
     )
+    
     parser.add_argument(
-        "--output", type=str, help="Output directory for markdown files"
+        "-o",
+        "--output",
+        type=str,
+        help="Output directory for markdown files"
     )
+
     parser.add_argument(
         "--limit", type=int, help="Limit for --list command (default: show all)", default=None
     )
@@ -901,7 +907,9 @@ Examples:
         default="markdown",
         help="Output format for exported conversations (default: markdown)"
     )
+    
     parser.add_argument(
+        "-d",
         "--detailed",
         action="store_true",
         help="Include tool use, MCP responses, and system messages in export"

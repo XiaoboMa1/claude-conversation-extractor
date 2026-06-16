@@ -67,11 +67,14 @@ setup(
     python_requires=">=3.8",
     package_dir={"": "src"},
     py_modules=[
+        "extractor",
         "extract_claude_logs",
         "interactive_ui",
         "search_conversations",
         "realtime_search",
         "search_cli",
+        "session_resolver",
+        "think_realtime",
     ],
     entry_points={
         "console_scripts": [

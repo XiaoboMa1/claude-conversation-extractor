@@ -78,16 +78,16 @@ class TestClaudeConversationExtractor(unittest.TestCase):
 
         self.assertIsNotNone(result)
         self.assertTrue(result.exists())
-        self.assertTrue(result.name.startswith("claude-conversation-"))
+        self.assertTrue(result.name.startswith("claude-chat-"))
         self.assertTrue(result.name.endswith(".md"))
 
         # Check content
         content = result.read_text()
         self.assertIn("# Claude Conversation Log", content)
         self.assertIn("Session ID: test-session-id", content)
-        self.assertIn("## 👤 User", content)
+        self.assertIn("## User", content)
         self.assertIn("Hello Claude", content)
-        self.assertIn("## 🤖 Claude", content)
+        self.assertIn("## Claude", content)
         self.assertIn("Hello! How can I help?", content)
 
     def test_extract_conversation_valid_jsonl(self):
@@ -129,7 +129,7 @@ class TestClaudeConversationExtractor(unittest.TestCase):
         conversation = self.extractor.extract_conversation(fake_path)
         self.assertEqual(conversation, [])
 
-    @patch("extract_claude_logs.Path.rglob")
+    @patch("extractor.Path.rglob")
     def test_find_sessions(self, mock_rglob):
         """Test finding session files"""
         # Mock some session files
@@ -147,6 +147,69 @@ class TestClaudeConversationExtractor(unittest.TestCase):
         self.assertEqual(sessions[0].stat().st_mtime, 2000)
         self.assertEqual(sessions[1].stat().st_mtime, 1500)
         self.assertEqual(sessions[2].stat().st_mtime, 1000)
+
+
+    def test_merge_consecutive_same_role(self):
+        """Test that consecutive messages from the same speaker are merged."""
+        conversation = [
+            {"role": "user", "content": "First message", "timestamp": ""},
+            {"role": "user", "content": "Second message", "timestamp": ""},
+            {"role": "assistant", "content": "Reply one", "timestamp": ""},
+            {"role": "assistant", "content": "Reply two", "timestamp": ""},
+            {"role": "user", "content": "Third message", "timestamp": ""},
+        ]
+        result = self.extractor._merge_and_clean(conversation)
+        self.assertEqual(len(result), 3)
+        self.assertIn("First message", result[0]["content"])
+        self.assertIn("Second message", result[0]["content"])
+        self.assertIn("Reply one", result[1]["content"])
+        self.assertIn("Reply two", result[1]["content"])
+        self.assertEqual(result[2]["content"], "Third message")
+
+    def test_filter_noise_tags(self):
+        """Test that XML noise tags are stripped from content."""
+        conversation = [
+            {
+                "role": "user",
+                "content": '<local-command-caveat>noise</local-command-caveat>\nReal content',
+                "timestamp": "",
+            },
+        ]
+        result = self.extractor._merge_and_clean(conversation)
+        self.assertEqual(len(result), 1)
+        self.assertNotIn("local-command-caveat", result[0]["content"])
+        self.assertIn("Real content", result[0]["content"])
+
+    def test_filter_noise_only_messages(self):
+        """Test that pure-noise messages are dropped entirely."""
+        conversation = [
+            {"role": "user", "content": "Real question", "timestamp": ""},
+            {
+                "role": "assistant",
+                "content": "You've hit your limit resets 1:20pm",
+                "timestamp": "",
+            },
+            {"role": "assistant", "content": "Prompt is too long", "timestamp": ""},
+            {"role": "assistant", "content": "Actual answer", "timestamp": ""},
+        ]
+        result = self.extractor._merge_and_clean(conversation)
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["content"], "Real question")
+        self.assertEqual(result[1]["content"], "Actual answer")
+
+    def test_filter_command_tags_dropped(self):
+        """Test that messages consisting only of command tags are dropped."""
+        conversation = [
+            {
+                "role": "user",
+                "content": "<command-name>/effort</command-name>\n<command-message>effort</command-message>\n<command-args>max</command-args>",
+                "timestamp": "",
+            },
+            {"role": "user", "content": "Actual question", "timestamp": ""},
+        ]
+        result = self.extractor._merge_and_clean(conversation)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["content"], "Actual question")
 
 
 if __name__ == "__main__":

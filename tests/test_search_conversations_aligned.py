@@ -11,11 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-# Add parent directory to path before local imports
-sys.path.append(str(Path(__file__).parent.parent))
-
-# Local imports after sys.path modification
-from search_conversations import ConversationSearcher, SearchResult  # noqa: E402
+from claude_extractor.search.searcher import ConversationSearcher
+from claude_extractor.search.helpers import SearchResult
 
 
 class TestSearchResult(unittest.TestCase):
@@ -233,7 +230,7 @@ class TestConversationSearcher(unittest.TestCase):
 
     def test_semantic_search_without_spacy(self):
         """Test semantic search falls back when spaCy not available"""
-        with patch("search_conversations.SPACY_AVAILABLE", False):
+        with patch("claude_extractor.search.searcher.SPACY_AVAILABLE", False):
             with patch("pathlib.Path.home", return_value=Path(self.temp_dir)):
                 results = self.searcher.search("programming", mode="semantic")
 
@@ -248,8 +245,8 @@ class TestConversationSearcher(unittest.TestCase):
         mock_doc.similarity.return_value = 0.8
         mock_nlp.return_value = mock_doc
 
-        with patch("search_conversations.SPACY_AVAILABLE", True):
-            with patch("search_conversations.nlp", mock_nlp):
+        with patch("claude_extractor.search.searcher.SPACY_AVAILABLE", True):
+            with patch("claude_extractor.search.searcher.nlp", mock_nlp):
                 with patch("pathlib.Path.home", return_value=Path(self.temp_dir)):
                     results = self.searcher.search("coding", mode="semantic")
 

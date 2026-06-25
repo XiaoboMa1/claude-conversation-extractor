@@ -10,11 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-# Add parent directory to path before local imports
-sys.path.append(str(Path(__file__).parent.parent))
-
-# Local imports after sys.path modification
-from realtime_search import RealTimeSearch, TerminalDisplay  # noqa: E402
+from claude_extractor.monitor.realtime_search import RealTimeSearch, TerminalDisplay
 
 
 class MockKeyboardHandler:
@@ -114,7 +110,7 @@ class TestRealTimeSearchUI(unittest.TestCase):
         input_sequence = ["h", "e", "l", "l", "o", "ESC"]
 
         with patch(
-            "realtime_search.KeyboardHandler",
+            "claude_extractor.monitor.realtime_search.KeyboardHandler",
             return_value=MockKeyboardHandler(input_sequence),
         ):
             result = self.rts.run()
@@ -166,7 +162,7 @@ class TestRealTimeSearchUI(unittest.TestCase):
         input_sequence = ["ENTER"]
 
         with patch(
-            "realtime_search.KeyboardHandler",
+            "claude_extractor.monitor.realtime_search.KeyboardHandler",
             return_value=MockKeyboardHandler(input_sequence, max_calls=10),
         ):
             result = self.rts.run()
@@ -193,7 +189,7 @@ class TestRealTimeSearchUI(unittest.TestCase):
         input_sequence = ["DOWN", "DOWN", "ENTER"]
 
         with patch(
-            "realtime_search.KeyboardHandler",
+            "claude_extractor.monitor.realtime_search.KeyboardHandler",
             return_value=MockKeyboardHandler(input_sequence, max_calls=20),
         ):
             result = self.rts.run()
@@ -207,7 +203,7 @@ class TestRealTimeSearchUI(unittest.TestCase):
         def raise_interrupt(*args, **kwargs):
             raise KeyboardInterrupt()
 
-        with patch("realtime_search.KeyboardHandler") as mock_kb_class:
+        with patch("claude_extractor.monitor.realtime_search.KeyboardHandler") as mock_kb_class:
             mock_kb = Mock()
             mock_kb.get_key.side_effect = raise_interrupt
             mock_kb_class.return_value.__enter__.return_value = mock_kb
@@ -223,7 +219,7 @@ class TestRealTimeSearchUI(unittest.TestCase):
         input_sequence = ["h", "e", "l", "l", "o", "BACKSPACE", "BACKSPACE", "p", "ESC"]
 
         with patch(
-            "realtime_search.KeyboardHandler",
+            "claude_extractor.monitor.realtime_search.KeyboardHandler",
             return_value=MockKeyboardHandler(input_sequence),
         ):
             self.rts.run()
@@ -242,7 +238,7 @@ class TestRealTimeSearchUI(unittest.TestCase):
         self.assertIsNone(self.rts.search_thread)
 
         with patch(
-            "realtime_search.KeyboardHandler",
+            "claude_extractor.monitor.realtime_search.KeyboardHandler",
             return_value=MockKeyboardHandler(input_sequence),
         ):
             self.rts.run()
@@ -265,7 +261,7 @@ class TestRealTimeSearchUI(unittest.TestCase):
         input_sequence = ["a", "b", "c", None, None, None, None, "ESC"]
 
         with patch(
-            "realtime_search.KeyboardHandler",
+            "claude_extractor.monitor.realtime_search.KeyboardHandler",
             return_value=MockKeyboardHandler(input_sequence),
         ):
             self.rts.run()

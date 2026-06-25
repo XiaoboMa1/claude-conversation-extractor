@@ -9,11 +9,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock
 
-# Add parent directory to path before local imports
-sys.path.append(str(Path(__file__).parent.parent))
-
-# Local imports after sys.path modification
-from realtime_search import RealTimeSearch, create_smart_searcher  # noqa: E402
+from claude_extractor.monitor.realtime_search import RealTimeSearch, create_smart_searcher
 
 
 class TestRealTimeSearchUnit(unittest.TestCase):

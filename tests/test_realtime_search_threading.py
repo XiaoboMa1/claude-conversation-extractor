@@ -11,11 +11,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-# Add parent directory to path before local imports
-sys.path.append(str(Path(__file__).parent.parent))
-
-# Local imports after sys.path modification
-from realtime_search import RealTimeSearch  # noqa: E402
+from claude_extractor.monitor.realtime_search import RealTimeSearch
 
 
 class TestRealTimeSearchThreading(unittest.TestCase):
@@ -125,8 +121,8 @@ class TestRealTimeSearchUI(unittest.TestCase):
         self.mock_extractor = Mock()
         self.rts = RealTimeSearch(self.mock_searcher, self.mock_extractor)
 
-    @patch("realtime_search.threading.Thread")
-    @patch("realtime_search.KeyboardHandler")
+    @patch("claude_extractor.monitor.realtime_search.threading.Thread")
+    @patch("claude_extractor.monitor.realtime_search.KeyboardHandler")
     @patch.object(RealTimeSearch, "display")
     def test_run_exit_key(self, mock_display, mock_keyboard_class, mock_thread_class):
         """Test run exits on ESC key"""
@@ -146,9 +142,9 @@ class TestRealTimeSearchUI(unittest.TestCase):
         mock_thread.start.assert_called_once()
         mock_display.clear_screen.assert_called()
 
-    @patch("realtime_search.threading.Thread")
-    @patch("realtime_search.KeyboardHandler")
-    @patch("realtime_search.TerminalDisplay")
+    @patch("claude_extractor.monitor.realtime_search.threading.Thread")
+    @patch("claude_extractor.monitor.realtime_search.KeyboardHandler")
+    @patch("claude_extractor.monitor.realtime_search.TerminalDisplay")
     def test_run_select_result(
         self, mock_display_class, mock_keyboard_class, mock_thread_class
     ):
@@ -178,9 +174,9 @@ class TestRealTimeSearchUI(unittest.TestCase):
 
         self.assertEqual(result, test_path)
 
-    @patch("realtime_search.threading.Thread")
-    @patch("realtime_search.KeyboardHandler")
-    @patch("realtime_search.TerminalDisplay")
+    @patch("claude_extractor.monitor.realtime_search.threading.Thread")
+    @patch("claude_extractor.monitor.realtime_search.KeyboardHandler")
+    @patch("claude_extractor.monitor.realtime_search.TerminalDisplay")
     def test_run_keyboard_interrupt(
         self, mock_display_class, mock_keyboard_class, mock_thread_class
     ):
@@ -203,9 +199,9 @@ class TestRealTimeSearchUI(unittest.TestCase):
         self.assertIsNone(result)
         mock_display.clear_screen.assert_called()
 
-    @patch("realtime_search.threading.Thread")
-    @patch("realtime_search.KeyboardHandler")
-    @patch("realtime_search.TerminalDisplay")
+    @patch("claude_extractor.monitor.realtime_search.threading.Thread")
+    @patch("claude_extractor.monitor.realtime_search.KeyboardHandler")
+    @patch("claude_extractor.monitor.realtime_search.TerminalDisplay")
     def test_run_exception_cleanup(
         self, mock_display_class, mock_keyboard_class, mock_thread_class
     ):

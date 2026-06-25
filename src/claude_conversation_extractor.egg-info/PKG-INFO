@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: claude-conversation-extractor
-Version: 1.1.2
+Version: 1.2.0
 Summary: Export Claude Code conversations from ~/.claude/projects. Extract, search, and backup Claude chat history to markdown files.
 Home-page: https://github.com/ZeroSumQuant/claude-conversation-extractor
 Author: Dustin Kirby

@@ -7,10 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from extract_claude_logs import ClaudeConversationExtractor  # noqa: E402
+from claude_extractor.core.extractor import ClaudeConversationExtractor
 
 
 class TestClaudeConversationExtractor(unittest.TestCase):
@@ -129,7 +126,7 @@ class TestClaudeConversationExtractor(unittest.TestCase):
         conversation = self.extractor.extract_conversation(fake_path)
         self.assertEqual(conversation, [])
 
-    @patch("extractor.Path.rglob")
+    @patch("claude_extractor.core.extractor.Path.rglob")
     def test_find_sessions(self, mock_rglob):
         """Test finding session files"""
         # Mock some session files

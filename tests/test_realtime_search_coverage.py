@@ -11,11 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
-# Add parent directory to path before local imports
-sys.path.append(str(Path(__file__).parent.parent))
-
-# Local imports after sys.path modification
-from realtime_search import (KeyboardHandler, RealTimeSearch,  # noqa: E402
+from claude_extractor.monitor.realtime_search import (KeyboardHandler, RealTimeSearch,
                              TerminalDisplay, create_smart_searcher)
 
 
@@ -40,7 +36,7 @@ class TestKeyboardHandlerCoverage(unittest.TestCase):
             self.assertFalse(hasattr(handler, "stdin_fd"))
 
     @patch("sys.platform", "win32")
-    @patch("realtime_search.msvcrt")
+    @patch("claude_extractor.monitor.realtime_search.msvcrt")
     def test_windows_keyboard_special_keys(self, mock_msvcrt):
         """Test Windows special key handling"""
         handler = KeyboardHandler()
@@ -69,7 +65,7 @@ class TestKeyboardHandlerCoverage(unittest.TestCase):
                 mock_msvcrt.getch.side_effect = None
 
     @patch("sys.platform", "win32")
-    @patch("realtime_search.msvcrt")
+    @patch("claude_extractor.monitor.realtime_search.msvcrt")
     def test_windows_keyboard_regular_chars(self, mock_msvcrt):
         """Test Windows regular character input"""
         handler = KeyboardHandler()
@@ -82,7 +78,7 @@ class TestKeyboardHandlerCoverage(unittest.TestCase):
         self.assertEqual(result, "a")
 
     @patch("sys.platform", "win32")
-    @patch("realtime_search.msvcrt")
+    @patch("claude_extractor.monitor.realtime_search.msvcrt")
     def test_windows_keyboard_decode_error(self, mock_msvcrt):
         """Test Windows keyboard decode error handling"""
         handler = KeyboardHandler()
@@ -95,7 +91,7 @@ class TestKeyboardHandlerCoverage(unittest.TestCase):
         self.assertIsNone(result)
 
     @patch("sys.platform", "win32")
-    @patch("realtime_search.msvcrt")
+    @patch("claude_extractor.monitor.realtime_search.msvcrt")
     def test_windows_keyboard_timeout(self, mock_msvcrt):
         """Test Windows keyboard timeout"""
         handler = KeyboardHandler()
@@ -122,8 +118,8 @@ class TestKeyboardHandlerCoverage(unittest.TestCase):
     def test_unix_keyboard_context_manager(self):
         """Test Unix keyboard context manager"""
         with patch("sys.stdin.fileno", return_value=0), patch(
-            "realtime_search.termios"
-        ) as mock_termios, patch("realtime_search.tty") as mock_tty:
+            "claude_extractor.monitor.realtime_search.termios"
+        ) as mock_termios, patch("claude_extractor.monitor.realtime_search.tty") as mock_tty:
 
             old_settings = "old_settings"
             mock_termios.tcgetattr.return_value = old_settings
@@ -145,7 +141,7 @@ class TestKeyboardHandlerCoverage(unittest.TestCase):
     def test_unix_keyboard_special_sequences(self):
         """Test Unix escape sequences"""
         with patch("sys.stdin.fileno", return_value=0), patch(
-            "realtime_search.select"
+            "claude_extractor.monitor.realtime_search.select"
         ) as mock_select, patch("sys.stdin") as mock_stdin:
 
             handler = KeyboardHandler()
@@ -181,7 +177,7 @@ class TestKeyboardHandlerCoverage(unittest.TestCase):
     def test_unix_keyboard_ctrl_c(self):
         """Test Ctrl+C handling"""
         with patch("sys.stdin.fileno", return_value=0), patch(
-            "realtime_search.select"
+            "claude_extractor.monitor.realtime_search.select"
         ) as mock_select, patch("sys.stdin") as mock_stdin:
 
             handler = KeyboardHandler()

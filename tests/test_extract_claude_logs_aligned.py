@@ -11,11 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-# Add parent directory to path before local imports
-sys.path.append(str(Path(__file__).parent.parent))
-
-# Local imports after sys.path modification
-from extract_claude_logs import ClaudeConversationExtractor, main  # noqa: E402
+from claude_extractor.core.extractor import ClaudeConversationExtractor
+from claude_extractor.cli.main import main
 
 
 class TestClaudeConversationExtractor(unittest.TestCase):

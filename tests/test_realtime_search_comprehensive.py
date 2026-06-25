@@ -11,11 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-# Add parent directory to path before local imports
-sys.path.append(str(Path(__file__).parent.parent))
-
-# Local imports after sys.path modification
-from realtime_search import (KeyboardHandler, RealTimeSearch, SearchState,  # noqa: E402
+from claude_extractor.monitor.realtime_search import (KeyboardHandler, RealTimeSearch, SearchState,
                              TerminalDisplay, create_smart_searcher)
 
 
@@ -56,8 +52,8 @@ class TestKeyboardHandlerComprehensive(unittest.TestCase):
     @patch("sys.platform", "darwin")
     def test_unix_keyboard_special_keys(self):
         """Test Unix keyboard handler with all special keys"""
-        with patch("realtime_search.termios"), patch("realtime_search.tty"), patch(
-            "realtime_search.select"
+        with patch("claude_extractor.monitor.realtime_search.termios"), patch("claude_extractor.monitor.realtime_search.tty"), patch(
+            "claude_extractor.monitor.realtime_search.select"
         ) as mock_select, patch("sys.stdin") as mock_stdin:
 
             handler = KeyboardHandler()
@@ -95,8 +91,8 @@ class TestKeyboardHandlerComprehensive(unittest.TestCase):
     @patch("sys.platform", "darwin")
     def test_unix_keyboard_ctrl_c(self):
         """Test Unix keyboard handler Ctrl+C"""
-        with patch("realtime_search.termios"), patch("realtime_search.tty"), patch(
-            "realtime_search.select"
+        with patch("claude_extractor.monitor.realtime_search.termios"), patch("claude_extractor.monitor.realtime_search.tty"), patch(
+            "claude_extractor.monitor.realtime_search.select"
         ) as mock_select, patch("sys.stdin") as mock_stdin:
 
             handler = KeyboardHandler()
@@ -110,8 +106,8 @@ class TestKeyboardHandlerComprehensive(unittest.TestCase):
     @patch("sys.platform", "darwin")
     def test_unix_keyboard_timeout(self):
         """Test Unix keyboard timeout"""
-        with patch("realtime_search.termios"), patch("realtime_search.tty"), patch(
-            "realtime_search.select"
+        with patch("claude_extractor.monitor.realtime_search.termios"), patch("claude_extractor.monitor.realtime_search.tty"), patch(
+            "claude_extractor.monitor.realtime_search.select"
         ) as mock_select:
 
             handler = KeyboardHandler()
@@ -125,7 +121,7 @@ class TestKeyboardHandlerComprehensive(unittest.TestCase):
     @patch("sys.platform", "win32")
     def test_windows_keyboard_all_keys(self):
         """Test Windows keyboard handler with all key types"""
-        with patch("realtime_search.msvcrt") as mock_msvcrt:
+        with patch("claude_extractor.monitor.realtime_search.msvcrt") as mock_msvcrt:
             handler = KeyboardHandler()
 
             # Test timeout (no key pressed)
@@ -158,7 +154,7 @@ class TestKeyboardHandlerComprehensive(unittest.TestCase):
     @patch("sys.platform", "win32")
     def test_windows_keyboard_decode_error(self):
         """Test Windows keyboard with decode error"""
-        with patch("realtime_search.msvcrt") as mock_msvcrt:
+        with patch("claude_extractor.monitor.realtime_search.msvcrt") as mock_msvcrt:
             handler = KeyboardHandler()
 
             mock_msvcrt.kbhit.return_value = True
@@ -422,8 +418,8 @@ class TestRealTimeSearchComprehensive(unittest.TestCase):
         self.assertNotIn("other", self.rts.results_cache)
         self.assertNotIn("te", self.rts.results_cache)
 
-    @patch("realtime_search.KeyboardHandler")
-    @patch("realtime_search.TerminalDisplay")
+    @patch("claude_extractor.monitor.realtime_search.KeyboardHandler")
+    @patch("claude_extractor.monitor.realtime_search.TerminalDisplay")
     def test_run_exception_handling(self, mock_display_class, mock_keyboard_class):
         """Test run method exception handling"""
         mock_keyboard = Mock()

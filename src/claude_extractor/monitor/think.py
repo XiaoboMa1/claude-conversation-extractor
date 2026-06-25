@@ -10,7 +10,6 @@ Usage:
     extract --inspect 7c3e9f              # by UUID prefix
     extract --inspect peppy-twirling-wren  # by slug (auto-generated name)
     extract --inspect "gft resume wording" # by custom title (user-set via /rename)
-    python think_realtime.py <identifier>
 """
 
 import json
@@ -20,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from session_resolver import (
+from ..session.resolver import (
     get_claude_projects_dir,
     get_session_display_name,
     resolve_session,
@@ -34,13 +33,7 @@ WAIT_MESSAGE_INTERVAL = 30.0  # seconds between "still waiting" messages
 
 
 def get_project_dir_for_session(session_path: Path) -> Path:
-    """
-    Given a session jsonl path, return its project directory.
-
-    Handles both layouts:
-      ~/.claude/projects/<encoded-project>/<uuid>.jsonl
-      ~/.claude/projects/<encoded-project>/<uuid>/<uuid>.jsonl
-    """
+    """Given a session jsonl path, return its project directory."""
     parent = session_path.parent
     if parent.name == session_path.stem:
         return parent.parent
@@ -48,10 +41,7 @@ def get_project_dir_for_session(session_path: Path) -> Path:
 
 
 def find_newest_session_in_project(project_dir: Path, exclude: Optional[Path] = None) -> Optional[Path]:
-    """
-    Find the most recently modified jsonl in a project directory.
-    Optionally exclude a specific file (the one we're already tailing).
-    """
+    """Find the most recently modified jsonl in a project directory."""
     newest = None
     newest_mtime = 0.0
 
@@ -72,8 +62,8 @@ def find_newest_session_in_project(project_dir: Path, exclude: Optional[Path] = 
 
 
 def extract_thinking_from_line(line: str) -> list:
-    """
-    Parse a jsonl line and extract all thinking block texts.
+    """Parse a jsonl line and extract all thinking block texts.
+
     Returns a list of (thinking_text, timestamp) tuples.
     """
     try:
@@ -81,14 +71,12 @@ def extract_thinking_from_line(line: str) -> list:
     except json.JSONDecodeError:
         return []
 
-    # Only process assistant messages
     if obj.get("type") != "assistant":
         return []
 
     results = []
     timestamp = obj.get("timestamp", "")
 
-    # Navigate to content blocks — tolerant of structure variations
     message = obj.get("message", {})
     content = message.get("content", [])
 
@@ -119,19 +107,18 @@ def format_timestamp(iso_timestamp: str) -> str:
 def print_thinking(thinking_text: str, timestamp: str, display_name: str):
     """Print a thinking block with a header."""
     time_display = format_timestamp(timestamp)
-    print(f"\n── thinking [{display_name}] {time_display} ──")
+    print(f"\n-- thinking [{display_name}] {time_display} --")
     print(thinking_text)
-    print(f"── end ──")
+    print(f"-- end --")
     sys.stdout.flush()
 
 
 def tail_session(session_path: Path) -> Optional[Path]:
-    """
-    Tail a session jsonl file, printing thinking blocks as they appear.
+    """Tail a session jsonl file, printing thinking blocks as they appear.
 
     Returns:
         None if user interrupted (Ctrl+C)
-        Path to a new session file if a newer one was detected (e.g. after /clear)
+        Path to a new session file if a newer one was detected
     """
     session_id = session_path.stem
     project_dir = get_project_dir_for_session(session_path)
@@ -140,15 +127,13 @@ def tail_session(session_path: Path) -> Optional[Path]:
     print(f"Tailing: {display_name} ({session_id[:8]}...)")
     print(f"Project: {project_dir.name}")
     print(f"Poll: {POLL_INTERVAL}s | Ctrl+C to stop")
-    print("─" * 60)
+    print("-" * 60)
     sys.stdout.flush()
 
-    # Seek to end of file
     file_size = session_path.stat().st_size if session_path.exists() else 0
     offset = file_size
     buffer = ""
     last_data_time = time.time()
-    last_wait_message = time.time()
 
     while True:
         try:
@@ -159,7 +144,6 @@ def tail_session(session_path: Path) -> Optional[Path]:
             current_size = session_path.stat().st_size
 
             if current_size > offset:
-                # New data available
                 with open(session_path, "r", encoding="utf-8") as f:
                     f.seek(offset)
                     new_data = f.read()
@@ -168,7 +152,6 @@ def tail_session(session_path: Path) -> Optional[Path]:
                 last_data_time = time.time()
                 buffer += new_data
 
-                # Process complete lines (handle half-line buffering)
                 while "\n" in buffer:
                     line, buffer = buffer.split("\n", 1)
                     line = line.strip()
@@ -180,28 +163,19 @@ def tail_session(session_path: Path) -> Optional[Path]:
                         print_thinking(thinking_text, timestamp, display_name)
 
             elif current_size < offset:
-                # File was truncated — reset
                 offset = 0
                 buffer = ""
 
-            # Check for newer session file if stale
             elapsed_since_data = time.time() - last_data_time
             if elapsed_since_data > STALE_THRESHOLD:
                 newer = find_newest_session_in_project(project_dir, exclude=session_path)
                 if newer and newer.stat().st_mtime > session_path.stat().st_mtime:
                     new_name = get_session_display_name(newer)
-                    print(f"\n── session switch ──")
+                    print(f"\n-- session switch --")
                     print(f"New session: {new_name} ({newer.stem[:8]}...)")
-                    print(f"── following ──")
+                    print(f"-- following --")
                     sys.stdout.flush()
                     return newer
-
-                # Periodic heartbeat
-                # if time.time() - last_wait_message > WAIT_MESSAGE_INTERVAL:
-                #     last_wait_message = time.time()
-                #     now = datetime.now().strftime("%H:%M:%S")
-                #     print(f"[{now}] waiting...", file=sys.stderr)
-                #     sys.stderr.flush()
 
             time.sleep(POLL_INTERVAL)
 
@@ -210,10 +184,7 @@ def tail_session(session_path: Path) -> Optional[Path]:
 
 
 def wait_for_session(identifier: str) -> Optional[Path]:
-    """
-    Wait for a session matching the identifier to appear.
-    Polls every second.
-    """
+    """Wait for a session matching the identifier to appear."""
     projects_dir = get_claude_projects_dir()
     print(f"No session matching '{identifier}' found.")
     print(f"Watching {projects_dir} ...")
@@ -233,17 +204,12 @@ def wait_for_session(identifier: str) -> Optional[Path]:
 
 
 def main():
-    """Entry point for --think mode."""
+    """Entry point for --inspect mode."""
     if len(sys.argv) < 2:
         print("Usage: think_realtime.py <identifier>")
         print("       extract --inspect <identifier>")
         print()
         print("  identifier: UUID prefix (>= 6 hex chars), session slug, or custom title")
-        print()
-        print("Examples:")
-        print("  extract -t 7c3e9f                  # UUID prefix")
-        print("  extract -t peppy-twirling-wren      # slug (auto-generated)")
-        print('  extract -t "gft resume wording"     # custom title (/rename)')
         sys.exit(1)
 
     identifier = sys.argv[1]
@@ -252,7 +218,6 @@ def main():
         print(f"Error: identifier too short (got {len(identifier)}: '{identifier}')")
         sys.exit(1)
 
-    # Resolve session
     session_path = resolve_session(identifier)
 
     if session_path is None:
@@ -261,7 +226,6 @@ def main():
             print("\nAborted.")
             sys.exit(0)
 
-    # Main loop: tail session, follow to new sessions on /clear
     while session_path is not None:
         session_path = tail_session(session_path)
 

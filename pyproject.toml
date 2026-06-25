@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "claude-conversation-extractor"
-version = "1.1.2"
+version = "1.2.0"
 description = "Export Claude Code conversations from ~/.claude/projects. Extract, search, and backup Claude chat history to markdown files."
 readme = "README.md"
 classifiers = [
@@ -39,14 +39,11 @@ requires-python = ">=3.8"
 dependencies = []
 
 [project.scripts]
-extract = "extract_claude_logs:launch_interactive"
-claude-extract = "extract_claude_logs:launch_interactive"
-claude-logs = "extract_claude_logs:launch_interactive"
-claude-start = "extract_claude_logs:launch_interactive"
-claude-search = "search_cli:main"
-
-[tool.setuptools]
-py-modules = ["extract_claude_logs", "interactive_ui", "search_conversations", "realtime_search", "search_cli"]
+extract = "claude_extractor.cli.main:launch_interactive"
+claude-extract = "claude_extractor.cli.main:launch_interactive"
+claude-logs = "claude_extractor.cli.main:launch_interactive"
+claude-start = "claude_extractor.cli.main:launch_interactive"
+claude-search = "claude_extractor.cli.search:main"
 
 [tool.setuptools.package-dir]
 "" = "src"

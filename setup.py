@@ -4,7 +4,7 @@
 import atexit
 from pathlib import Path
 
-from setuptools import setup
+from setuptools import find_packages, setup
 from setuptools.command.install import install
 
 
@@ -16,14 +16,14 @@ class PostInstallCommand(install):
 
         # Print helpful messages after installation
         def print_success_message():
-            print("\n🎉 Installation complete!")
-            print("\n📋 Quick Start Commands:")
+            print("\nInstallation complete!")
+            print("\nQuick Start Commands:")
             print("  claude-start         # Interactive UI with logo & real-time search")
             print("  claude-extract       # CLI for extraction & searching")
             print("  claude-search        # Search and view conversations")
-            print("\n⭐ If you find this tool helpful, please star us on GitHub:")
+            print("\nIf you find this tool helpful, please star us on GitHub:")
             print("   https://github.com/ZeroSumQuant/claude-conversation-extractor")
-            print("\nThank you for using Claude Conversation Extractor! 🚀\n")
+            print("\nThank you for using Claude Conversation Extractor!\n")
 
         # Register to run after pip finishes
         atexit.register(print_success_message)
@@ -35,7 +35,7 @@ long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="claude-conversation-extractor",
-    version="1.1.2",
+    version="1.2.0",
     author="Dustin Kirby",
     author_email="",  # Contact via GitHub
     description=(
@@ -66,23 +66,14 @@ setup(
     ],
     python_requires=">=3.8",
     package_dir={"": "src"},
-    py_modules=[
-        "extractor",
-        "extract_claude_logs",
-        "interactive_ui",
-        "search_conversations",
-        "realtime_search",
-        "search_cli",
-        "session_resolver",
-        "think_realtime",
-    ],
+    packages=find_packages(where="src"),
     entry_points={
         "console_scripts": [
-            "extract=extract_claude_logs:launch_interactive",
-            "claude-extract=extract_claude_logs:launch_interactive",
-            "claude-logs=extract_claude_logs:launch_interactive",
-            "claude-start=extract_claude_logs:launch_interactive",
-            "claude-search=search_cli:main",
+            "extract=claude_extractor.cli.main:launch_interactive",
+            "claude-extract=claude_extractor.cli.main:launch_interactive",
+            "claude-logs=claude_extractor.cli.main:launch_interactive",
+            "claude-start=claude_extractor.cli.main:launch_interactive",
+            "claude-search=claude_extractor.cli.search:main",
         ],
     },
 

@@ -157,6 +157,7 @@ class ClaudeConversationExtractor:
         detailed: bool = False,
         diff: bool = False,
         think: bool = False,
+        cmd: bool = False,
     ) -> List[Dict[str, str]]:
         """Extract conversation messages from a JSONL file."""
         conversation: List[Dict[str, str]] = []
@@ -205,7 +206,7 @@ class ClaudeConversationExtractor:
                                             collect_file_change_from_tool_use(item, _pending_changes)
 
                                 text = extract_text_content(
-                                    msg.get("content", []), detailed=detailed, think=think
+                                    msg.get("content", []), detailed=detailed, think=think, cmd=cmd
                                 )
                                 if text and text.strip():
                                     conversation.append(
@@ -388,6 +389,7 @@ class ClaudeConversationExtractor:
         detailed: bool = False,
         diff: bool = False,
         think: bool = False,
+        cmd: bool = False,
     ) -> Tuple[int, int]:
         """Extract multiple sessions by index."""
         success = 0
@@ -397,7 +399,7 @@ class ClaudeConversationExtractor:
             if 0 <= idx < len(sessions):
                 session_path = sessions[idx]
                 conversation = self.extract_conversation(
-                    session_path, detailed=detailed, diff=diff, think=think
+                    session_path, detailed=detailed, diff=diff, think=think, cmd=cmd
                 )
                 if conversation:
                     output_path = self.save_conversation(
@@ -422,6 +424,7 @@ class ClaudeConversationExtractor:
         detailed: bool = False,
         diff: bool = False,
         think: bool = False,
+        cmd: bool = False,
     ) -> int:
         """Extract a session and all its subagent conversations."""
         session_id = session_path.stem
@@ -430,7 +433,7 @@ class ClaudeConversationExtractor:
         # Main session
         print(f"\nMain session: {session_id}")
         conversation = self.extract_conversation(
-            session_path, detailed=detailed, diff=diff, think=think
+            session_path, detailed=detailed, diff=diff, think=think, cmd=cmd
         )
         if conversation:
             output_path = self.save_conversation(
@@ -458,7 +461,7 @@ class ClaudeConversationExtractor:
                     print(f"      Desc: {agent_desc}")
 
                 agent_conv = self.extract_conversation(
-                    agent_path, detailed=detailed, diff=diff, think=think
+                    agent_path, detailed=detailed, diff=diff, think=think, cmd=cmd
                 )
                 if agent_conv:
                     header = self._get_subagent_header(agent_path)
@@ -505,5 +508,5 @@ class ClaudeConversationExtractor:
         from .parser import format_file_changes
         return format_file_changes(changes)
 
-    def _extract_text_content(self, content, detailed: bool = False, think: bool = False) -> str:
-        return extract_text_content(content, detailed, think)
+    def _extract_text_content(self, content, detailed: bool = False, think: bool = False, cmd: bool = False) -> str:
+        return extract_text_content(content, detailed, think, cmd)

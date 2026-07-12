@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 
 def extract_text_content(
-    content, detailed: bool = False, think: bool = False
+    content, detailed: bool = False, think: bool = False, cmd: bool = False
 ) -> str:
     """Extract text from various content formats Claude uses.
 
@@ -19,6 +19,7 @@ def extract_text_content(
         content: String or list of content blocks from JSONL entry.
         detailed: Include tool_use blocks in output.
         think: Include thinking blocks (wrapped in markdown comments).
+        cmd: Include Bash tool_use blocks formatted as description + inline code.
     """
     if isinstance(content, str):
         return content
@@ -32,16 +33,40 @@ def extract_text_content(
                         text_parts.append(f"<!-- {thinking_text} -->")
                 elif item.get("type") == "text":
                     text_parts.append(item.get("text", ""))
-                elif detailed and item.get("type") == "tool_use":
-                    tool_name = item.get("name", "unknown")
-                    tool_input = item.get("input", {})
-                    text_parts.append(f"\nUsing tool: {tool_name}")
-                    text_parts.append(
-                        f"Input: {json.dumps(tool_input, indent=2, ensure_ascii=False)}\n"
-                    )
+                elif item.get("type") == "tool_use":
+                    if cmd and item.get("name") == "Bash":
+                        text_parts.append(_format_bash_command(item))
+                    elif detailed:
+                        tool_name = item.get("name", "unknown")
+                        tool_input = item.get("input", {})
+                        text_parts.append(f"\nUsing tool: {tool_name}")
+                        text_parts.append(
+                            f"Input: {json.dumps(tool_input, indent=2, ensure_ascii=False)}\n"
+                        )
         return "\n".join(text_parts)
     else:
         return str(content)
+
+
+def _format_bash_command(item: dict) -> str:
+    """Format a Bash tool_use block as description + code.
+
+    Short commands (<=30 chars): inline backticks.
+    Long commands (>30 chars): fenced code block on next line.
+    """
+    inp = item.get("input", {})
+    command = inp.get("command", "")
+    description = inp.get("description", "")
+
+    if len(command) <= 30:
+        code = f"`{command}`"
+    else:
+        code = f"```\n{command}\n```"
+
+    if description:
+        return f'Command to "{description}":\n{code}'
+    else:
+        return code
 
 
 def extract_detailed_entry(

@@ -7,11 +7,13 @@ change blocks for output.
 """
 
 import json
+import re
 from typing import Dict, List, Optional
 
 
 def extract_text_content(
-    content, detailed: bool = False, think: bool = False, cmd: bool = False
+    content, detailed: bool = False, think: bool = False,
+    cmdin: bool = False, cmdout: bool = False,
 ) -> str:
     """Extract text from various content formats Claude uses.
 
@@ -19,11 +21,16 @@ def extract_text_content(
         content: String or list of content blocks from JSONL entry.
         detailed: Include tool_use blocks in output.
         think: Include thinking blocks (wrapped in markdown comments).
-        cmd: Include Bash tool_use blocks formatted as description + inline code.
+        cmdin: Include Bash tool_use blocks formatted as description + inline code.
+        cmdout: Like cmdin, but also insert a placeholder for command output
+            (filled later by attach_bash_output).
     """
     if isinstance(content, str):
+        if content.lstrip().startswith("<task-notification>"):
+            return ""
         return content
     elif isinstance(content, list):
+        show_cmd = cmdin or cmdout
         text_parts = []
         for item in content:
             if isinstance(item, dict):
@@ -34,8 +41,10 @@ def extract_text_content(
                 elif item.get("type") == "text":
                     text_parts.append(item.get("text", ""))
                 elif item.get("type") == "tool_use":
-                    if cmd and item.get("name") == "Bash":
-                        text_parts.append(_format_bash_command(item))
+                    if show_cmd and item.get("name") == "Bash":
+                        text_parts.append(
+                            _format_bash_command(item, output_placeholder=cmdout)
+                        )
                     elif detailed:
                         tool_name = item.get("name", "unknown")
                         tool_input = item.get("input", {})
@@ -48,25 +57,87 @@ def extract_text_content(
         return str(content)
 
 
-def _format_bash_command(item: dict) -> str:
-    """Format a Bash tool_use block as description + code.
+def _format_bash_command(item: dict, output_placeholder: bool = False) -> str:
+    """Format a Bash tool_use block as an indented fenced code block.
 
-    Short commands (<=30 chars): inline backticks.
-    Long commands (>30 chars): fenced code block on next line.
+    Layout (indented 4 spaces to distinguish from conversation text)::
+
+        Command to "description":
+            ```
+            command text
+            ------ output ------   ← only when output is filled later
+            output lines …
+            ```
+
+    When *output_placeholder* is True a ``<!--CMDOUT:id-->`` marker is
+    inserted inside the fence so that ``attach_bash_output`` can replace
+    it with the real output later.
     """
     inp = item.get("input", {})
     command = inp.get("command", "")
     description = inp.get("description", "")
 
-    if len(command) <= 30:
-        code = f"`{command}`"
-    else:
-        code = f"```\n{command}\n```"
+    parts = [_indent("```")]
+    parts.append(_indent(command))
+    if output_placeholder:
+        tool_id = item.get("id", "")
+        if tool_id:
+            parts.append(f"<!--CMDOUT:{tool_id}-->")
+    parts.append(_indent("```"))
 
+    block = "\n".join(parts)
     if description:
-        return f'Command to "{description}":\n{code}'
+        return f'Command to "{description}":\n{block}'
+    return block
+
+
+# ── Bash command output (--cmdout) ───────────────────────────────────
+
+
+def _format_output_text(stdout: str, stderr: str = "") -> str:
+    """Merge stdout/stderr into cleaned text.  Returns "" when empty."""
+    output = stdout or ""
+    if stderr:
+        output = (output + "\n" + stderr) if output else stderr
+    if not output.strip():
+        return ""
+    return output.replace("\r\n", "\n").rstrip()
+
+
+def attach_bash_output(
+    conversation: List[Dict[str, str]],
+    assistant_idx: int,
+    tool_use_id: str,
+    stdout: str,
+    stderr: str = "",
+) -> None:
+    """Replace a ``<!--CMDOUT:id-->`` placeholder with the actual output.
+
+    The output is rendered as an indented ``------ output ------`` block
+    inside the same fenced region as the command.
+    """
+    if assistant_idx < 0 or assistant_idx >= len(conversation):
+        return
+    placeholder = f"<!--CMDOUT:{tool_use_id}-->"
+    msg = conversation[assistant_idx]
+    if placeholder not in msg["content"]:
+        return
+
+    output = _format_output_text(stdout, stderr)
+    if output:
+        replacement = _indent("------ output ------") + "\n" + _indent(output)
+        msg["content"] = msg["content"].replace(placeholder, replacement)
     else:
-        return code
+        # No output — remove placeholder line cleanly
+        msg["content"] = msg["content"].replace(placeholder + "\n", "")
+        msg["content"] = msg["content"].replace(placeholder, "")
+
+
+def cleanup_cmdout_placeholders(conversation: List[Dict[str, str]]) -> None:
+    """Remove any remaining unfilled ``<!--CMDOUT:...-->`` placeholders."""
+    pattern = re.compile(r"<!--CMDOUT:.*?-->\n?")
+    for msg in conversation:
+        msg["content"] = pattern.sub("", msg["content"])
 
 
 def extract_detailed_entry(
@@ -125,7 +196,7 @@ def collect_file_change_from_tool_use(
     inp = item.get("input", {})
     fp = inp.get("file_path", "")
     if fp and "old_string" in inp and "new_string" in inp:
-        pending.setdefault(fp, []).append((inp["old_string"], inp["new_string"]))
+        pending.setdefault(fp, []).append({"old": inp["old_string"], "new": inp["new_string"]})
 
 
 def collect_write_change(tool_result: dict, pending: Dict[str, list]) -> None:
@@ -163,9 +234,20 @@ def collect_write_change(tool_result: dict, pending: Dict[str, list]) -> None:
                 elif line.startswith("+"):
                     after.append(line[1:])
             if before or after:
-                pending.setdefault(fp, []).append(
-                    ("\n".join(before), "\n".join(after))
-                )
+                edit = {"old": "\n".join(before), "new": "\n".join(after)}
+                old_start = hunk.get("oldStart")
+                old_lines = hunk.get("oldLines")
+                new_start = hunk.get("newStart")
+                new_lines = hunk.get("newLines")
+                if old_start is not None:
+                    edit["old_start"] = old_start
+                    if old_lines is not None:
+                        edit["old_end"] = old_start + old_lines - 1
+                if new_start is not None:
+                    edit["new_start"] = new_start
+                    if new_lines is not None:
+                        edit["new_end"] = new_start + new_lines - 1
+                pending.setdefault(fp, []).append(edit)
 
 
 def attach_file_changes(
@@ -186,13 +268,23 @@ def _indent(text: str, prefix: str = "    ") -> str:
     return "\n".join(prefix + line for line in text.split("\n"))
 
 
+def _line_range_label(edit: dict, key_prefix: str) -> str:
+    """Build a line-range suffix like ' (line 5 to 12)' if info is available."""
+    start = edit.get(f"{key_prefix}_start")
+    end = edit.get(f"{key_prefix}_end")
+    if start is not None and end is not None:
+        return f" (line {start} to {end})"
+    elif start is not None:
+        return f" (line {start})"
+    return ""
+
+
 def format_file_changes(changes: Dict[str, list]) -> str:
     """Render collected file changes into a markdown block.
 
-    Output format (designed for readable markdown rendering):
-    - ``#### File Changes:`` heading separates diff from message text.
-    - Code blocks are 4-space indented to visually distinguish from messages.
-    - **Before** / **After** labels are bold.
+    Each edited section within a file is shown as a paired Before/After block.
+    Sections are separated by ``----------``.
+    Line numbers are included when available (Write-update via structuredPatch).
     """
     if not changes:
         return ""
@@ -207,16 +299,19 @@ def format_file_changes(changes: Dict[str, list]) -> str:
         else:
             parts.append(f"{file_num}. {fp}")
             real_edits = [e for e in edits if e is not None]
-            if real_edits:
-                old_blocks = [old for old, _ in real_edits]
-                new_blocks = [new for _, new in real_edits]
-                divider = "\n----------\n"
-                parts.append("**Before**:")
+            for i, edit in enumerate(real_edits):
+                old_text = edit["old"]
+                new_text = edit["new"]
+                before_label = f"**Before{_line_range_label(edit, 'old')}**:"
+                after_label = f"**After{_line_range_label(edit, 'new')}**:"
+                parts.append(before_label)
                 parts.append(_indent("```"))
-                parts.append(_indent(divider.join(old_blocks)))
+                parts.append(_indent(old_text))
                 parts.append(_indent("```"))
-                parts.append("**After**:")
+                parts.append(after_label)
                 parts.append(_indent("```"))
-                parts.append(_indent(divider.join(new_blocks)))
+                parts.append(_indent(new_text))
                 parts.append(_indent("```"))
+                if i < len(real_edits) - 1:
+                    parts.append("----------")
     return "\n".join(parts)

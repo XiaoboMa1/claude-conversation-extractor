@@ -16,7 +16,9 @@ from typing import Dict, List, Optional, Tuple
 
 from . import formatters as fmt
 from .parser import (
+    attach_bash_output,
     attach_file_changes,
+    cleanup_cmdout_placeholders,
     collect_file_change_from_tool_use,
     collect_write_change,
     extract_detailed_entry,
@@ -157,12 +159,16 @@ class ClaudeConversationExtractor:
         detailed: bool = False,
         diff: bool = False,
         think: bool = False,
-        cmd: bool = False,
+        cmdin: bool = False,
+        cmdout: bool = False,
     ) -> List[Dict[str, str]]:
         """Extract conversation messages from a JSONL file."""
         conversation: List[Dict[str, str]] = []
         _last_assistant_idx = -1
         _pending_changes: Dict[str, list] = {}
+        # Maps Bash tool_use id -> conversation index of the assistant message
+        # that contains the corresponding <!--CMDOUT:id--> placeholder.
+        _pending_bash_cmds: Dict[str, int] = {}
 
         try:
             with open(jsonl_path, "r", encoding="utf-8") as f:
@@ -180,6 +186,24 @@ class ClaudeConversationExtractor:
                         if entry.get("type") == "user" and "message" in entry:
                             msg = entry["message"]
                             if isinstance(msg, dict) and msg.get("role") == "user":
+                                # Attach bash outputs to prior assistant message
+                                if cmdout and _pending_bash_cmds:
+                                    user_content = msg.get("content", [])
+                                    if isinstance(user_content, list):
+                                        for item in user_content:
+                                            if isinstance(item, dict) and item.get("type") == "tool_result":
+                                                tuid = item.get("tool_use_id", "")
+                                                if tuid in _pending_bash_cmds:
+                                                    tur = entry.get("toolUseResult", {})
+                                                    if isinstance(tur, dict) and "stdout" in tur:
+                                                        stdout = tur.get("stdout", "")
+                                                        stderr = tur.get("stderr", "")
+                                                    else:
+                                                        stdout = item.get("content", "") if isinstance(item.get("content"), str) else ""
+                                                        stderr = ""
+                                                    attach_bash_output(conversation, _pending_bash_cmds[tuid], tuid, stdout, stderr)
+                                                    del _pending_bash_cmds[tuid]
+
                                 text = extract_text_content(msg.get("content", ""))
                                 if text and text.strip():
                                     if diff and _pending_changes and _last_assistant_idx >= 0:
@@ -206,7 +230,8 @@ class ClaudeConversationExtractor:
                                             collect_file_change_from_tool_use(item, _pending_changes)
 
                                 text = extract_text_content(
-                                    msg.get("content", []), detailed=detailed, think=think, cmd=cmd
+                                    msg.get("content", []), detailed=detailed, think=think,
+                                    cmdin=cmdin, cmdout=cmdout,
                                 )
                                 if text and text.strip():
                                     conversation.append(
@@ -218,6 +243,14 @@ class ClaudeConversationExtractor:
                                     )
                                     if diff:
                                         _last_assistant_idx = len(conversation) - 1
+                                    # Record Bash tool_use ids for cmdout backfill
+                                    if cmdout:
+                                        idx = len(conversation) - 1
+                                        for item in msg.get("content", []):
+                                            if (isinstance(item, dict)
+                                                    and item.get("type") == "tool_use"
+                                                    and item.get("name") == "Bash"):
+                                                _pending_bash_cmds[item.get("id", "")] = idx
                                 elif diff and _pending_changes:
                                     conversation.append(
                                         {
@@ -242,6 +275,11 @@ class ClaudeConversationExtractor:
                 attach_file_changes(
                     conversation, _last_assistant_idx, _pending_changes
                 )
+
+            # Remove any unfilled cmdout placeholders (commands whose
+            # tool_result was missing or had no output).
+            if cmdout:
+                cleanup_cmdout_placeholders(conversation)
 
         except Exception as e:
             print(f"Error reading file {jsonl_path}: {e}")
@@ -389,7 +427,8 @@ class ClaudeConversationExtractor:
         detailed: bool = False,
         diff: bool = False,
         think: bool = False,
-        cmd: bool = False,
+        cmdin: bool = False,
+        cmdout: bool = False,
     ) -> Tuple[int, int]:
         """Extract multiple sessions by index."""
         success = 0
@@ -399,7 +438,8 @@ class ClaudeConversationExtractor:
             if 0 <= idx < len(sessions):
                 session_path = sessions[idx]
                 conversation = self.extract_conversation(
-                    session_path, detailed=detailed, diff=diff, think=think, cmd=cmd
+                    session_path, detailed=detailed, diff=diff, think=think,
+                    cmdin=cmdin, cmdout=cmdout,
                 )
                 if conversation:
                     output_path = self.save_conversation(
@@ -424,7 +464,8 @@ class ClaudeConversationExtractor:
         detailed: bool = False,
         diff: bool = False,
         think: bool = False,
-        cmd: bool = False,
+        cmdin: bool = False,
+        cmdout: bool = False,
     ) -> int:
         """Extract a session and all its subagent conversations."""
         session_id = session_path.stem
@@ -433,7 +474,8 @@ class ClaudeConversationExtractor:
         # Main session
         print(f"\nMain session: {session_id}")
         conversation = self.extract_conversation(
-            session_path, detailed=detailed, diff=diff, think=think, cmd=cmd
+            session_path, detailed=detailed, diff=diff, think=think,
+            cmdin=cmdin, cmdout=cmdout,
         )
         if conversation:
             output_path = self.save_conversation(
@@ -461,7 +503,8 @@ class ClaudeConversationExtractor:
                     print(f"      Desc: {agent_desc}")
 
                 agent_conv = self.extract_conversation(
-                    agent_path, detailed=detailed, diff=diff, think=think, cmd=cmd
+                    agent_path, detailed=detailed, diff=diff, think=think,
+                    cmdin=cmdin, cmdout=cmdout,
                 )
                 if agent_conv:
                     header = self._get_subagent_header(agent_path)
@@ -508,5 +551,6 @@ class ClaudeConversationExtractor:
         from .parser import format_file_changes
         return format_file_changes(changes)
 
-    def _extract_text_content(self, content, detailed: bool = False, think: bool = False, cmd: bool = False) -> str:
-        return extract_text_content(content, detailed, think, cmd)
+    def _extract_text_content(self, content, detailed: bool = False, think: bool = False,
+                              cmdin: bool = False, cmdout: bool = False) -> str:
+        return extract_text_content(content, detailed, think, cmdin=cmdin, cmdout=cmdout)

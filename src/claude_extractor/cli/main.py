@@ -106,9 +106,15 @@ Examples:
     )
 
     parser.add_argument(
-        "--cmd",
+        "--cmdin",
         action="store_true",
-        help="Include bash commands in exported conversation (description + inline code)"
+        help="Include bash commands (description + inline code)"
+    )
+
+    parser.add_argument(
+        "--cmdout",
+        action="store_true",
+        help="Include bash commands with their stdout/stderr output"
     )
 
     parser.add_argument(
@@ -172,7 +178,7 @@ Examples:
                 detailed=args.detailed,
                 diff=args.diff,
                 think=args.think,
-                cmd=args.cmd,
+                cmdin=args.cmdin, cmdout=args.cmdout,
             )
             print(f"\nSuccessfully saved {saved} file(s)")
         return
@@ -209,7 +215,7 @@ Examples:
             if args.detailed:
                 print("Including detailed tool use and system messages")
             saved = extractor.extract_session_with_subagents(
-                session_path, format=args.format, detailed=args.detailed, diff=args.diff, think=args.think, cmd=args.cmd
+                session_path, format=args.format, detailed=args.detailed, diff=args.diff, think=args.think, cmdin=args.cmdin, cmdout=args.cmdout
             )
             print(f"\nSuccessfully saved {saved} file(s)")
         else:
@@ -229,7 +235,7 @@ Examples:
                 if args.detailed:
                     print("Including detailed tool use and system messages")
                 success, total = extractor.extract_multiple(
-                    sessions, indices, format=args.format, detailed=args.detailed, diff=args.diff, think=args.think, cmd=args.cmd
+                    sessions, indices, format=args.format, detailed=args.detailed, diff=args.diff, think=args.think, cmdin=args.cmdin, cmdout=args.cmdout
                 )
                 print(f"\nSuccessfully extracted {success}/{total} sessions")
 
@@ -242,7 +248,7 @@ Examples:
 
         indices = list(range(limit))
         success, total = extractor.extract_multiple(
-            sessions, indices, format=args.format, detailed=args.detailed, diff=args.diff, think=args.think, cmd=args.cmd
+            sessions, indices, format=args.format, detailed=args.detailed, diff=args.diff, think=args.think, cmdin=args.cmdin, cmdout=args.cmdout
         )
         print(f"\nSuccessfully extracted {success}/{total} sessions")
 
@@ -254,7 +260,7 @@ Examples:
 
         indices = list(range(len(sessions)))
         success, total = extractor.extract_multiple(
-            sessions, indices, format=args.format, detailed=args.detailed, diff=args.diff, think=args.think, cmd=args.cmd
+            sessions, indices, format=args.format, detailed=args.detailed, diff=args.diff, think=args.think, cmdin=args.cmdin, cmdout=args.cmdout
         )
         print(f"\nSuccessfully extracted {success}/{total} sessions")
 

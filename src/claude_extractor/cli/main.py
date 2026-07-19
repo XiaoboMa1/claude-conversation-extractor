@@ -159,7 +159,7 @@ Examples:
         interactive_main()
         return
 
-    # Handle --list: two-stage interactive listing
+    # Handle --list: multi-stage interactive listing + browsing
     if args.list or (
         not args.extract
         and not args.all
@@ -167,20 +167,7 @@ Examples:
     ):
         from .listing import interactive_list
 
-        selected_session = interactive_list()
-
-        if selected_session:
-            extractor = ClaudeConversationExtractor(args.output)
-            print(f"\nExtracting session {selected_session.stem[:8]}... as {args.format.upper()} ...")
-            saved = extractor.extract_session_with_subagents(
-                selected_session,
-                format=args.format,
-                detailed=args.detailed,
-                diff=args.diff,
-                think=args.think,
-                cmdin=args.cmdin, cmdout=args.cmdout,
-            )
-            print(f"\nSuccessfully saved {saved} file(s)")
+        interactive_list()
         return
 
     # Initialize extractor with optional output directory

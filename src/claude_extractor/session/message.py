@@ -18,10 +18,17 @@ NOISE_PREFIXES = [
     "Caveat: The messages below were generated",
     "<local-command-caveat>",
     "<system-reminder>",
+    "<task-notification>",
     "This session is being continued from a previous conversation",
     "You've hit your limit",
     "Prompt is too long",
+    "No response requested",
 ]
+
+# Skills messages start with this prefix.  They are not noise per se
+# (the session was invoked via a skill), but listing/browsing should
+# treat them specially -- show the *last* N lines instead of the first.
+SKILL_PREFIX = "Base directory for this skill"
 
 # XML tag pairs used by Claude Code for slash commands and local-command output.
 _XML_TAG_PAIR_RE = re.compile(r"<[^>]+>.*?</[^>]+>", re.DOTALL)
@@ -40,6 +47,29 @@ def is_noise_message(text: str) -> bool:
     if len(cleaned) < 5:
         return True
     return False
+
+
+def is_skill_message(text: str) -> bool:
+    """Return True if *text* is a skill invocation (starts with skill prefix)."""
+    return text.strip().startswith(SKILL_PREFIX)
+
+
+def strip_skill_prompt(text: str) -> str:
+    """Strip the auto-injected skill template from a skill message.
+
+    If ``ARGUMENTS:`` is present, returns everything after it (the
+    user's actual input).  If absent, the message is a pure skill
+    invocation with no user content — returns empty string.
+
+    Non-skill messages are returned unchanged.
+    """
+    if not is_skill_message(text):
+        return text
+    marker = "ARGUMENTS:"
+    pos = text.find(marker)
+    if pos < 0:
+        return ""
+    return text[pos + len(marker):].strip()
 
 
 # ── Content extraction ───────────────────────────────────────────────
@@ -100,6 +130,9 @@ def get_first_meaningful_message(
                 clean = _clean_for_display(text)
                 if clean and len(clean) > 3:
                     lines = [ln for ln in clean.split("\n") if ln.strip()]
+                    if is_skill_message(text):
+                        # Show tail for skill invocations
+                        return "\n".join(lines[-max_lines:])
                     return "\n".join(lines[:max_lines])
     except (OSError, IOError):
         pass

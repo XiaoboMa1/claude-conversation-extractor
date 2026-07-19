@@ -9,6 +9,7 @@ src/claude_conversation_extractor.egg-info/entry_points.txt
 src/claude_conversation_extractor.egg-info/top_level.txt
 src/claude_extractor/__init__.py
 src/claude_extractor/cli/__init__.py
+src/claude_extractor/cli/browser.py
 src/claude_extractor/cli/interactive.py
 src/claude_extractor/cli/listing.py
 src/claude_extractor/cli/main.py
@@ -30,6 +31,7 @@ src/claude_extractor/search/searcher.py
 src/claude_extractor/search/semantic.py
 src/claude_extractor/session/__init__.py
 src/claude_extractor/session/discovery.py
+src/claude_extractor/session/loader.py
 src/claude_extractor/session/message.py
 src/claude_extractor/session/resolver.py
 tests/test_error_handling.py

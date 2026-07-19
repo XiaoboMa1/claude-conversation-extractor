@@ -55,8 +55,11 @@ def merge_and_clean(conversation: List[Dict[str, str]]) -> List[Dict[str, str]]:
     Steps:
     1. Strip XML noise tags from each message content.
     2. Drop messages that are pure noise.
-    3. Merge neighboring messages from the same role into one turn.
+    3. Strip skill prompt templates (keep only user args after ARGUMENTS:).
+    4. Merge neighboring messages from the same role into one turn.
     """
+    from ..session.message import is_skill_message, strip_skill_prompt
+
     # Phase 1: clean + filter
     cleaned = []
     for msg in conversation:
@@ -67,6 +70,11 @@ def merge_and_clean(conversation: List[Dict[str, str]]) -> List[Dict[str, str]]:
             if fc_idx >= 0:
                 content = content[fc_idx:]
             else:
+                continue
+        # Strip skill template — keep only user args
+        if is_skill_message(content):
+            content = strip_skill_prompt(content)
+            if not content:
                 continue
         cleaned.append({**msg, "content": content})
 

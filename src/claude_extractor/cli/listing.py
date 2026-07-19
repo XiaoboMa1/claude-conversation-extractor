@@ -121,18 +121,8 @@ def _print_indented(label: str, text: str, indent: str = "      ") -> None:
 # ── Interactive flow ─────────────────────────────────────────────────
 
 
-def interactive_list() -> Optional[Path]:
-    """Two-stage interactive listing.  Returns the selected session path
-    or ``None`` if the user cancels.
-    """
-    # Stage 1: project directories
-    projects = get_project_dirs()
-
-    if not projects:
-        print("No Claude sessions found in ~/.claude/projects/")
-        print("Make sure you've used Claude Code and have conversations saved.")
-        return None
-
+def _stage_projects(projects: List[Dict]) -> Optional[Dict]:
+    """Stage 1: display project list, return selected project or None."""
     print(f"\nFound {len(projects)} project(s):\n")
     print("=" * 60)
 
@@ -143,30 +133,29 @@ def interactive_list() -> Optional[Path]:
 
     print("\n" + "=" * 60)
 
-    try:
-        choice = input(
-            f"\nSelect project (1-{len(projects)}), or Enter to exit: "
-        ).strip()
-    except (EOFError, KeyboardInterrupt):
-        print("\nCancelled")
-        return None
+    from .browser import _read_line
 
-    if not choice:
-        return None
-    try:
-        proj_idx = int(choice) - 1
-        if proj_idx < 0 or proj_idx >= len(projects):
-            print("Invalid selection.")
+    while True:
+        choice = _read_line(
+            f"\nSelect project (1-{len(projects)}) [Esc=exit]: "
+        )
+        if choice is None:
             return None
-    except ValueError:
-        print("Invalid input.")
-        return None
+        if not choice.strip():
+            continue
+        try:
+            idx = int(choice.strip()) - 1
+            if 0 <= idx < len(projects):
+                return projects[idx]
+            print("Invalid selection.")
+        except ValueError:
+            print("Invalid input.")
 
-    selected_project = projects[proj_idx]
 
-    # Stage 2: sessions in the chosen project
-    print(f"\nLoading sessions for: {selected_project['display_name']} ...")
-    sessions = get_sessions_for_project(selected_project["path"])
+def _stage_sessions(project: Dict) -> Optional[Path]:
+    """Stage 2: display sessions in a project, return selected path or None."""
+    print(f"\nLoading sessions for: {project['display_name']} ...")
+    sessions = get_sessions_for_project(project["path"])
 
     if not sessions:
         print("No sessions found in this project.")
@@ -191,25 +180,50 @@ def interactive_list() -> Optional[Path]:
 
     print("\n" + "=" * 60)
 
-    # Stage 3: pick a session
-    try:
-        action = input(
-            f"\nSelect session (1-{len(sessions)}) to extract/view, or Enter to exit: "
-        ).strip()
-    except (EOFError, KeyboardInterrupt):
-        print("\nCancelled")
-        return None
+    from .browser import _read_line
 
-    if not action:
-        return None
-
-    try:
-        sess_idx = int(action) - 1
-        if sess_idx < 0 or sess_idx >= len(sessions):
-            print("Invalid selection.")
+    while True:
+        action = _read_line(
+            f"\nSelect session (1-{len(sessions)}) to view [Esc=back]: "
+        )
+        if action is None:
             return None
-    except ValueError:
-        print("Invalid input.")
-        return None
+        if not action.strip():
+            continue
+        try:
+            idx = int(action.strip()) - 1
+            if 0 <= idx < len(sessions):
+                return sessions[idx]["path"]
+            print("Invalid selection.")
+        except ValueError:
+            print("Invalid input.")
 
-    return sessions[sess_idx]["path"]
+
+def interactive_list() -> None:
+    """Multi-stage interactive listing and browsing.
+
+    Stage 1: project directories  (loops back on Enter from stage 2)
+    Stage 2: sessions in a project
+    Stage 3-4: message browsing (delegated to browser.browse_session)
+    """
+    from .browser import browse_session
+
+    projects = get_project_dirs()
+
+    if not projects:
+        print("No Claude sessions found in ~/.claude/projects/")
+        print("Make sure you've used Claude Code and have conversations saved.")
+        return
+
+    while True:
+        selected_project = _stage_projects(projects)
+        if selected_project is None:
+            return
+
+        session_path = _stage_sessions(selected_project)
+        if session_path is None:
+            # Esc in stage 2 -> go back to project list
+            continue
+
+        browse_session(session_path)
+        return

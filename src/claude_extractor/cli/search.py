@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
-Two-stage interactive search for Claude conversations.
+Three-stage interactive search for Claude conversations.
 
-Flow:
-  1. Accept search keyword (CLI arg or interactive prompt).
-  2. Search all main sessions (exclude subagents).
-  3. Group matching files by project directory -- user picks a project.
-  4. Show per-session matches with line-based context around the keyword.
+Usage:
+  extract --find [keyword]
+  claude-search [keyword]
 
-Entry point: ``claude-search [keyword]``
+Stage 1: search all sessions -> group by project -> user picks project
+Stage 2: sessions with match context (pager) -> user picks sessions
+Stage 3: load messages from selected sessions -> preview -> view -> extract
 """
 
 import re
 import sys
 from collections import OrderedDict
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 from ..search.searcher import ConversationSearcher
 from ..cli.listing import decode_project_dir_name
@@ -28,139 +28,253 @@ _XML_TAG_RE = re.compile(r"<[^>]+>.*?</[^>]+>", re.DOTALL)
 def _strip_xml_tags(text: str) -> str:
     """Remove XML tag pairs and collapse resulting blank lines."""
     cleaned = _XML_TAG_RE.sub("", text)
-    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
-    return cleaned
+    return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
 
-def _get_search_keyword() -> str:
-    """Get search keyword from CLI args or interactive prompt."""
-    if len(sys.argv) > 1:
-        return " ".join(sys.argv[1:])
+def _truncate_line(text: str, max_len: int = 120) -> str:
+    """Truncate a single line to *max_len* characters."""
+    if len(text) > max_len:
+        return text[: max_len - 3] + "..."
+    return text
 
-    try:
-        keyword = input("Search keyword: ").strip()
-    except (EOFError, KeyboardInterrupt):
-        print("\nCancelled")
-        return ""
-    return keyword
+
+# ── Grouping ──────────────────────────────────────────────────────
 
 
 def _group_by_project(
     grouped: Dict[Path, List[Dict]],
 ) -> Dict[Path, Dict[Path, List[Dict]]]:
-    """Re-group ``{jsonl_path: [matches]}`` into
-    ``{project_dir: {jsonl_path: [matches]}}``.
-    """
+    """Re-group {jsonl_path: [matches]} into {project_dir: {jsonl_path: [matches]}}."""
     by_project: Dict[Path, Dict[Path, List[Dict]]] = OrderedDict()
-
     for jsonl_path, matches in grouped.items():
         parent = jsonl_path.parent
         project_dir = parent.parent if parent.name == jsonl_path.stem else parent
-
         if project_dir not in by_project:
             by_project[project_dir] = OrderedDict()
         by_project[project_dir][jsonl_path] = matches
-
     return by_project
 
 
-def _display_project_list(by_project: Dict[Path, Dict[Path, List[Dict]]]) -> List[Path]:
-    """Print project directory list and return ordered list of project paths."""
-    project_list = list(by_project.keys())
-    total_matches = sum(
-        sum(len(m) for m in sessions.values())
-        for sessions in by_project.values()
-    )
-    print(f"\nFound {total_matches} match(es) across {len(project_list)} project(s):\n")
-    print("Select project directory (type number):")
-    for i, proj_dir in enumerate(project_list, 1):
-        session_count = len(by_project[proj_dir])
-        match_count = sum(len(m) for m in by_project[proj_dir].values())
-        display = decode_project_dir_name(proj_dir.name)
-        print(f"  {i}. {display}  ({session_count} session(s), {match_count} match(es))")
-    return project_list
+# ── Formatting ────────────────────────────────────────────────────
 
 
-def _display_session_matches(
-    sessions: Dict[Path, List[Dict]], keyword: str
-) -> None:
-    """Print per-session match details with context."""
-    print()
-    print("=" * 60)
+def _format_session_matches(
+    sessions: Dict[Path, List[Dict]],
+) -> Tuple[str, List[Path]]:
+    """Format session match list for pager display.
+
+    Each session shows:
+    - First match per message: 3-line context before + match + 3-line after
+    - Subsequent matches in same message: just the match line
+
+    Returns (formatted_text, ordered_session_paths).
+    """
+    lines = ["=" * 60]
+    session_paths: List[Path] = []
 
     for i, (jsonl_path, matches) in enumerate(sessions.items(), 1):
+        session_paths.append(jsonl_path)
         session_id = jsonl_path.stem
         try:
             display_name = get_session_display_name(jsonl_path)
         except Exception:
             display_name = session_id[:8]
 
-        print(f"\n{i}. Session {session_id[:8]}... ({display_name})  "
-              f"({len(matches)} match(es))")
+        total_matches = sum(m["match_count"] for m in matches)
+        lines.append("")
+        lines.append(
+            f"{i}. Session {session_id[:8]}... ({display_name})  "
+            f"({total_matches} match(es))"
+        )
 
-        for j, m in enumerate(matches, 1):
+        match_num = 0
+        for m in matches:
             speaker = m["speaker"]
-            context = m["context"]
-            context = _strip_xml_tags(context)
-            context_lines = context.split("\n")
-            truncated = []
-            for ln in context_lines:
-                if len(ln) > 120:
-                    ln = ln[:117] + "..."
-                truncated.append(ln)
+
+            # First match in this message: full context
+            match_num += 1
+            context = _strip_xml_tags(m["first_context"])
+            ctx_lines = context.split("\n")
+            truncated = [_truncate_line(ln) for ln in ctx_lines]
             preview = "\n      ".join(truncated)
-            print(f"   match {j}: {speaker}: {preview}")
+            lines.append(f"   match {match_num}: {speaker}: {preview}")
 
-    print("\n" + "=" * 60)
+            # Subsequent matches: just the match line
+            for other_line in m.get("other_lines", []):
+                match_num += 1
+                clean = _strip_xml_tags(other_line).strip()
+                lines.append(
+                    f"   match {match_num}: {speaker}: {_truncate_line(clean)}"
+                )
+
+    lines.append("")
+    lines.append("=" * 60)
+    return "\n".join(lines), session_paths
 
 
-def main():
-    """Entry point for ``claude-search``."""
-    keyword = _get_search_keyword()
-    if not keyword:
+# ── Stages ────────────────────────────────────────────────────────
+
+
+def _stage_find_projects(
+    by_project: Dict[Path, Dict[Path, List[Dict]]],
+) -> Optional[Path]:
+    """Stage 1: show projects with matches, return selected project path."""
+    from .browser import _read_line
+
+    project_list = list(by_project.keys())
+    total_matches = sum(
+        sum(m["match_count"] for ms in sessions.values() for m in ms)
+        for sessions in by_project.values()
+    )
+
+    print(
+        f"\nFound {total_matches} match(es) across "
+        f"{len(project_list)} project(s):\n"
+    )
+    for i, proj_dir in enumerate(project_list, 1):
+        session_count = len(by_project[proj_dir])
+        match_count = sum(
+            m["match_count"]
+            for ms in by_project[proj_dir].values()
+            for m in ms
+        )
+        display = decode_project_dir_name(proj_dir.name)
+        print(
+            f"  {i}. {display}  "
+            f"({session_count} session(s), {match_count} match(es))"
+        )
+
+    while True:
+        choice = _read_line(
+            f"\nSelect project (1-{len(project_list)}) [Esc=exit]: "
+        )
+        if choice is None:
+            return None
+        if not choice.strip():
+            continue
+        try:
+            idx = int(choice.strip()) - 1
+            if 0 <= idx < len(project_list):
+                return project_list[idx]
+            print("Invalid selection.")
+        except ValueError:
+            print("Invalid input.")
+
+
+def _stage_find_sessions(
+    sessions: Dict[Path, List[Dict]],
+) -> Optional[List[Path]]:
+    """Stage 2: show sessions with match context in pager, return selected paths."""
+    from .browser import _pager, _parse_ids, _read_line
+
+    text, session_paths = _format_session_matches(sessions)
+    _pager(text)
+
+    while True:
+        action = _read_line(
+            f"\nSelect session (1-{len(session_paths)}, space separated) "
+            f"to view [Esc=back]: "
+        )
+        if action is None:
+            return None
+        if not action.strip():
+            continue
+
+        ids = _parse_ids(action, len(session_paths))
+        if ids is not None:
+            unique_ids = sorted(set(ids))
+            return [session_paths[i - 1] for i in unique_ids]
+
+
+def _stage_find_messages(selected_paths: List[Path]) -> None:
+    """Stage 3: load messages from selected sessions, preview and extract.
+
+    Combines messages from all selected sessions with sequential IDs,
+    then runs the same preview -> view -> extract flow as --list.
+    """
+    from .browser import _stage_message_list, _stage_message_view
+    from ..session.loader import load_messages
+
+    all_messages: List[Dict] = []
+    next_id = 1
+    for path in selected_paths:
+        msgs = load_messages(path)
+        for msg in msgs:
+            msg["id"] = next_id
+            next_id += 1
+            all_messages.append(msg)
+
+    if not all_messages:
+        print("No messages found in selected sessions.")
         return
+
+    # Reuse --list stages 3-4 (message preview -> full view -> extract)
+    while True:
+        selected_ids = _stage_message_list(all_messages)
+        if selected_ids is None:
+            return
+
+        _stage_message_view(all_messages, selected_ids, selected_paths[0])
+        return
+
+
+# ── Entry points ──────────────────────────────────────────────────
+
+
+def find_interactive(keyword: Optional[str] = None) -> None:
+    """Three-stage interactive search.
+
+    Called by ``extract --find [keyword]`` and ``claude-search [keyword]``.
+    """
+    from .browser import _read_line
+
+    if not keyword:
+        kw = _read_line("Search keyword: ")
+        if kw is None or not kw.strip():
+            return
+        keyword = kw.strip()
 
     print(f"\nSearching for: '{keyword}' ...")
 
     searcher = ConversationSearcher()
-    grouped = searcher.search_grouped(keyword, case_sensitive=False, context_lines=3)
+    grouped = searcher.search_for_display(
+        keyword, case_sensitive=False, context_lines=3
+    )
 
     if not grouped:
         print(f"\nNo matches found for '{keyword}'")
         return
 
-    # Stage 1: group by project, user picks one
     by_project = _group_by_project(grouped)
 
-    if len(by_project) == 1:
-        selected_project = next(iter(by_project.keys()))
-    else:
-        project_list = _display_project_list(by_project)
-
-        try:
-            choice = input(
-                f"\nSelect project (1-{len(project_list)}): "
-            ).strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nCancelled")
-            return
-
-        try:
-            idx = int(choice) - 1
-            if idx < 0 or idx >= len(project_list):
-                print("Invalid selection.")
+    while True:
+        # Stage 1: project selection (auto-select if only one)
+        if len(by_project) == 1:
+            selected_project = next(iter(by_project.keys()))
+        else:
+            selected_project = _stage_find_projects(by_project)
+            if selected_project is None:
                 return
-        except ValueError:
-            print("Invalid input.")
-            return
 
-        selected_project = project_list[idx]
+        # Stage 2: session selection
+        sessions = by_project[selected_project]
+        selected_paths = _stage_find_sessions(sessions)
+        if selected_paths is None:
+            if len(by_project) == 1:
+                return
+            continue  # back to project selection
 
-    # Stage 2: show per-session matches
-    sessions = by_project[selected_project]
-    display = decode_project_dir_name(selected_project.name)
-    print(f"\nResults in: {display}")
-    _display_session_matches(sessions, keyword)
+        # Stage 3: message view + extract
+        _stage_find_messages(selected_paths)
+        return
+
+
+def main():
+    """Entry point for ``claude-search`` (backward-compatible)."""
+    keyword = ""
+    if len(sys.argv) > 1:
+        keyword = " ".join(sys.argv[1:])
+    find_interactive(keyword or None)
 
 
 if __name__ == "__main__":

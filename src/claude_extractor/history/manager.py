@@ -11,7 +11,7 @@ Cross-platform (Linux + Windows) via pathlib and shutil.
 
 import shutil
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from ..cli.listing import get_project_dirs, get_sessions_for_project
 from ..session.message import get_last_message_tail
@@ -95,66 +95,66 @@ def delete_by_identifier(identifier: str) -> bool:
 # ── Interactive clean (3-stage browser) ───────────────────────────────
 
 
-def _print_session_list(sessions: List[Dict]) -> None:
-    """Print numbered session list with last-message preview."""
-    print("=" * 60)
+def _format_session_list(sessions: List[Dict]) -> str:
+    """Format numbered session list with last-message preview for pager."""
+    lines = [f"{len(sessions)} session(s):", "", "=" * 60]
     for i, s in enumerate(sessions, 1):
         modified = s["modified"].strftime("%Y-%m-%d %H:%M")
-        print(f"\n  {i}. {s['session_id'][:8]}...  ({s['display_name']})  [{modified}]")
+        lines.append("")
+        lines.append(f"  {i}. {s['session_id'][:8]}...  ({s['display_name']})  [{modified}]")
 
         preview = get_last_message_tail(s["path"], max_lines=5)
         if preview:
             for ln in preview.split("\n"):
-                print(f"       {ln}")
+                lines.append(f"       {ln}")
         else:
-            print("       (no message content)")
-    print("\n" + "=" * 60)
+            lines.append("       (no message content)")
+    lines.append("")
+    lines.append("=" * 60)
+    return "\n".join(lines)
+
+
+def _parse_session_numbers(text: str, count: int) -> Optional[List[int]]:
+    """Parse space-separated session numbers into 0-indexed list."""
+    parts = text.strip().split()
+    if not parts:
+        return None
+    indices = []
+    for p in parts:
+        try:
+            n = int(p)
+        except ValueError:
+            print(f"  Invalid input: {p}")
+            return None
+        if n < 1 or n > count:
+            print(f"  Number {n} out of range (1-{count})")
+            return None
+        indices.append(n - 1)
+    return sorted(set(indices))
 
 
 def clean_interactive() -> int:
     """Interactive 3-stage session browser for bulk deletion.
 
     Stage 1: list projects, user picks one.
-    Stage 2: list sessions with last-message preview.
-    Stage 3: user enters session number to delete (immediate, no extra confirm).
-             Loops until user presses Enter to go back.
+    Stage 2: list sessions with last-message preview (in pager).
+    Stage 3: user enters session numbers to delete (space-separated).
+             Loops until user presses Esc to exit.
 
     Returns total number of deleted sessions.
     """
+    from ..cli.browser import _pager, _read_line
+    from ..cli.listing import _stage_projects
+
     # ── Stage 1: pick project ──
     projects = get_project_dirs()
     if not projects:
         print("No Claude sessions found in ~/.claude/projects/")
         return 0
 
-    print(f"\nFound {len(projects)} project(s):\n")
-    print("=" * 60)
-    for i, proj in enumerate(projects, 1):
-        modified = proj["modified"].strftime("%Y-%m-%d %H:%M")
-        print(f"\n  {i}. {proj['display_name']}")
-        print(f"     Modified: {modified}   Sessions: {proj['session_count']}")
-    print("\n" + "=" * 60)
-
-    try:
-        choice = input(
-            f"\nSelect project (1-{len(projects)}), or Enter to exit: "
-        ).strip()
-    except (EOFError, KeyboardInterrupt):
-        print("\nCancelled")
+    selected_project = _stage_projects(projects)
+    if selected_project is None:
         return 0
-
-    if not choice:
-        return 0
-    try:
-        proj_idx = int(choice) - 1
-        if proj_idx < 0 or proj_idx >= len(projects):
-            print("Invalid selection.")
-            return 0
-    except ValueError:
-        print("Invalid input.")
-        return 0
-
-    selected_project = projects[proj_idx]
 
     # ── Stage 2 & 3: list sessions, delete loop ──
     total_deleted = 0
@@ -167,36 +167,26 @@ def clean_interactive() -> int:
             print("No sessions remaining in this project.")
             break
 
-        print(f"\n{len(sessions)} session(s):\n")
-        _print_session_list(sessions)
+        _pager(_format_session_list(sessions))
 
-        try:
-            action = input(
-                f"\nEnter session number (1-{len(sessions)}) to delete, or Enter to exit: "
-            ).strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nCancelled")
+        action = _read_line(
+            f"\nSelect session (1-{len(sessions)}, space separated) to delete [Esc=exit]: "
+        )
+        if action is None:
             break
-
-        if not action:
-            break
-
-        try:
-            sess_idx = int(action) - 1
-            if sess_idx < 0 or sess_idx >= len(sessions):
-                print("Invalid selection.")
-                continue
-        except ValueError:
-            print("Invalid input.")
+        if not action.strip():
             continue
 
-        target = sessions[sess_idx]
-        success, deleted_paths = delete_session_files(target["path"])
-        if success:
-            total_deleted += 1
-            print(f"  Deleted: {target['session_id'][:8]}... ({target['display_name']})")
-            for p in deleted_paths:
-                print(f"    {p}")
+        indices = _parse_session_numbers(action, len(sessions))
+        if indices is None:
+            continue
+
+        for idx in indices:
+            target = sessions[idx]
+            success, deleted_paths = delete_session_files(target["path"])
+            if success:
+                total_deleted += 1
+                print(f"  Deleted: {target['session_id'][:8]}... ({target['display_name']})")
         # Loop back to show updated list
 
     if total_deleted:

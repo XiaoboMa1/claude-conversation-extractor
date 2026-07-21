@@ -213,6 +213,117 @@ class ConversationSearcher:
 
         return results
 
+    def search_for_display(
+        self,
+        query: str,
+        search_dir: Optional[Path] = None,
+        case_sensitive: bool = False,
+        context_lines: int = 3,
+    ) -> Dict[Path, List[Dict]]:
+        """Search all sessions for interactive display.
+
+        Returns ``{jsonl_path: [message_match, ...]}`` where each
+        message_match is a dict with keys:
+
+        - ``speaker``: ``"user"`` or ``"assistant"``
+        - ``match_count``: total keyword hits in this message
+        - ``first_context``: *context_lines* before + match line +
+          *context_lines* after for the first hit
+        - ``other_lines``: bare match-line strings for 2nd+ hits
+        """
+        if search_dir is None:
+            search_dir = Path.home() / ".claude" / "projects"
+        if not search_dir.exists() or not query or not query.strip():
+            return {}
+
+        jsonl_files = [
+            f for f in search_dir.rglob("*.jsonl")
+            if "subagents" not in f.parts
+        ]
+
+        grouped: Dict[Path, List[Dict]] = {}
+        for jsonl_file in jsonl_files:
+            matches = self._search_file_for_display(
+                jsonl_file, query, case_sensitive, context_lines
+            )
+            if matches:
+                grouped[jsonl_file] = matches
+        return grouped
+
+    def _search_file_for_display(
+        self,
+        jsonl_file: Path,
+        query: str,
+        case_sensitive: bool,
+        context_lines: int,
+    ) -> List[Dict]:
+        """Search one JSONL file for interactive display.
+
+        Returns one entry per JSONL message that contains the query.
+        First hit gets surrounding-line context; subsequent hits are
+        represented by their match line only.
+        """
+        results: List[Dict] = []
+        search_q = query if case_sensitive else query.lower()
+
+        try:
+            with open(jsonl_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        entry = json.loads(line.strip())
+                    except json.JSONDecodeError:
+                        continue
+
+                    if entry.get("type") not in ("user", "assistant"):
+                        continue
+
+                    speaker = "user" if entry["type"] == "user" else "assistant"
+                    content = extract_content(entry)
+                    if not content:
+                        continue
+
+                    content = clean_for_search(content)
+                    compare = content if case_sensitive else content.lower()
+                    if search_q not in compare:
+                        continue
+
+                    content_lines = content.split("\n")
+                    compare_lines = compare.split("\n")
+
+                    match_indices = [
+                        idx
+                        for idx, cline in enumerate(compare_lines)
+                        if search_q in cline
+                    ]
+                    if not match_indices:
+                        continue
+
+                    # First match: full context
+                    first_idx = match_indices[0]
+                    ctx_start = max(0, first_idx - context_lines)
+                    ctx_end = min(
+                        len(content_lines), first_idx + context_lines + 1
+                    )
+                    first_context = "\n".join(
+                        content_lines[ctx_start:ctx_end]
+                    )
+
+                    # Subsequent matches: just the match line
+                    other_lines = [
+                        content_lines[idx] for idx in match_indices[1:]
+                    ]
+
+                    results.append({
+                        "speaker": speaker,
+                        "match_count": len(match_indices),
+                        "first_context": first_context,
+                        "other_lines": other_lines,
+                    })
+        except Exception:
+            pass
+
+        return results
+
     def search_by_date_range(
         self,
         date_from: datetime,

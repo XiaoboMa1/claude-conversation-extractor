@@ -23,6 +23,8 @@ NOISE_PREFIXES = [
     "You've hit your limit",
     "Prompt is too long",
     "No response requested",
+    "[Request interrupted",
+    "No response needed",
 ]
 
 # Skills messages start with this prefix.  They are not noise per se

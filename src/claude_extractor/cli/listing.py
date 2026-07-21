@@ -153,7 +153,9 @@ def _stage_projects(projects: List[Dict]) -> Optional[Dict]:
 
 
 def _stage_sessions(project: Dict) -> Optional[Path]:
-    """Stage 2: display sessions in a project, return selected path or None."""
+    """Stage 2: display sessions in a project in pager, return selected path or None."""
+    from .browser import _pager, _read_line
+
     print(f"\nLoading sessions for: {project['display_name']} ...")
     sessions = get_sessions_for_project(project["path"])
 
@@ -161,26 +163,34 @@ def _stage_sessions(project: Dict) -> Optional[Path]:
         print("No sessions found in this project.")
         return None
 
-    print(f"\nFound {len(sessions)} session(s):\n")
-    print("=" * 60)
+    # Build session list text for pager
+    parts = [f"Found {len(sessions)} session(s):", "", "=" * 60]
 
     for i, s in enumerate(sessions, 1):
-        print(f"\n{i}. Session: {s['session_id'][:8]}... ({s['display_name']})")
-        print(f"   Modified: {s['modified'].strftime('%Y-%m-%d %H:%M')}")
+        parts.append("")
+        parts.append(f"{i}. Session: {s['session_id'][:8]}... ({s['display_name']})")
+        parts.append(f"   Modified: {s['modified'].strftime('%Y-%m-%d %H:%M')}")
 
         sub_str = _format_subagents(s["subagents"])
         if sub_str:
-            print(f"   Subagents: {sub_str}")
+            parts.append(f"   Subagents: {sub_str}")
 
         if s["first_user_msg"]:
-            _print_indented("First user message", s["first_user_msg"])
+            msg_lines = s["first_user_msg"].split("\n")
+            parts.append(f"   First user message: {msg_lines[0]}")
+            for ln in msg_lines[1:]:
+                parts.append(f"      {ln}")
 
         if s["last_assistant_msg"]:
-            _print_indented("Last claude message", s["last_assistant_msg"])
+            msg_lines = s["last_assistant_msg"].split("\n")
+            parts.append(f"   Last claude message: {msg_lines[0]}")
+            for ln in msg_lines[1:]:
+                parts.append(f"      {ln}")
 
-    print("\n" + "=" * 60)
+    parts.append("")
+    parts.append("=" * 60)
 
-    from .browser import _read_line
+    _pager("\n".join(parts))
 
     while True:
         action = _read_line(

@@ -37,7 +37,8 @@ Examples:
   %(prog)s --delete peppy-twirling    # Delete session by name
   %(prog)s --delete                   # Browse and delete sessions interactively
 
-  claude-search "keyword"            # Search conversations (separate command)
+  %(prog)s --find "keyword"          # Search conversations interactively
+  %(prog)s -f                        # Interactive search (prompts for keyword)
         """,
     )
     parser.add_argument("--list", action="store_true", help="List recent sessions")
@@ -127,6 +128,16 @@ Examples:
     )
 
     parser.add_argument(
+        "-f",
+        "--find",
+        nargs="?",
+        const="",
+        metavar="KEYWORD",
+        help="Search conversations interactively. "
+        "Omit KEYWORD to enter search term interactively.",
+    )
+
+    parser.add_argument(
         "--inspect",
         type=str,
         metavar="SESSION_PREFIX",
@@ -151,6 +162,12 @@ Examples:
         else:
             from ..history.manager import clean_interactive
             clean_interactive()
+        return
+
+    # Handle --find mode
+    if args.find is not None:
+        from .search import find_interactive
+        find_interactive(args.find or None)
         return
 
     # Handle interactive mode

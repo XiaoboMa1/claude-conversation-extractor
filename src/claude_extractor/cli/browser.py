@@ -64,6 +64,10 @@ def _read_line_win(prompt: str) -> Optional[str]:
             sys.stdout.flush()
             return None
 
+        if ch in ("\x00", "\xe0"):  # Arrow / function key prefix
+            msvcrt.getwch()  # consume scan code byte
+            continue
+
         if ch == "\r":  # Enter
             sys.stdout.write("\n")
             sys.stdout.flush()
@@ -130,7 +134,12 @@ def _builtin_pager(text: str) -> None:
             # Wait for key
             if sys.platform == "win32":
                 import msvcrt
-                ch = msvcrt.getwch()
+                while True:
+                    ch = msvcrt.getwch()
+                    if ch in ("\x00", "\xe0"):
+                        msvcrt.getwch()  # consume scan code
+                        continue
+                    break
                 sys.stdout.write("\r \r")
                 if ch.lower() == "q":
                     return

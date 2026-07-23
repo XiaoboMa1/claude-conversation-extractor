@@ -110,14 +110,6 @@ def _format_subagents(subagents: Dict[str, int]) -> str:
     return ", ".join(f"{count} {atype}" for atype, count in sorted(subagents.items()))
 
 
-def _print_indented(label: str, text: str, indent: str = "      ") -> None:
-    """Print a labelled multi-line block with consistent indentation."""
-    lines = text.split("\n")
-    print(f"   {label}: {lines[0]}")
-    for ln in lines[1:]:
-        print(f"{indent}{ln}")
-
-
 # ── Interactive flow ─────────────────────────────────────────────────
 
 
@@ -152,9 +144,12 @@ def _stage_projects(projects: List[Dict]) -> Optional[Dict]:
             print("Invalid input.")
 
 
-def _stage_sessions(project: Dict) -> Optional[Path]:
-    """Stage 2: display sessions in a project in pager, return selected path or None."""
-    from .browser import _pager, _read_line
+def _stage_sessions(project: Dict) -> Optional[List[Path]]:
+    """Stage 2: display sessions in a project in pager, return selected paths or None."""
+    from .browser import (
+        _C_BOLD, _C_CYAN, _C_DIM, _C_GREEN, _C_MAGENTA,
+        _C_RESET, _display_width, _pager, _parse_ids, _read_line,
+    )
 
     print(f"\nLoading sessions for: {project['display_name']} ...")
     sessions = get_sessions_for_project(project["path"])
@@ -163,50 +158,51 @@ def _stage_sessions(project: Dict) -> Optional[Path]:
         print("No sessions found in this project.")
         return None
 
-    # Build session list text for pager
-    parts = [f"Found {len(sessions)} session(s):", "", "=" * 60]
+    # Build session list text for pager (colored, ━━ separators)
+    parts = [f"Found {len(sessions)} session(s):"]
 
     for i, s in enumerate(sessions, 1):
-        parts.append("")
-        parts.append(f"{i}. Session: {s['session_id'][:8]}... ({s['display_name']})")
-        parts.append(f"   Modified: {s['modified'].strftime('%Y-%m-%d %H:%M')}")
+        modified = s["modified"].strftime("%Y-%m-%d %H:%M")
+        header_text = (
+            f" {i}. {s['session_id'][:8]}... ({s['display_name']})"
+            f" \u2014 {modified} "
+        )
+        rule_pad = max(2, 60 - _display_width(header_text) - 2)
+        pad = "\u2501" * rule_pad
+        parts.append(
+            f"{_C_BOLD}{_C_CYAN}\u2501\u2501{header_text}{pad}{_C_RESET}"
+        )
 
         sub_str = _format_subagents(s["subagents"])
         if sub_str:
             parts.append(f"   Subagents: {sub_str}")
 
         if s["first_user_msg"]:
-            msg_lines = s["first_user_msg"].split("\n")
-            parts.append(f"   First user message: {msg_lines[0]}")
-            for ln in msg_lines[1:]:
-                parts.append(f"      {ln}")
+            parts.append(f"  {_C_GREEN}user{_C_RESET}:")
+            for ln in s["first_user_msg"].split("\n"):
+                parts.append(f"  {_C_DIM}\u2502{_C_RESET}  {ln}")
 
         if s["last_assistant_msg"]:
-            msg_lines = s["last_assistant_msg"].split("\n")
-            parts.append(f"   Last claude message: {msg_lines[0]}")
-            for ln in msg_lines[1:]:
-                parts.append(f"      {ln}")
+            parts.append(f"  {_C_MAGENTA}assistant{_C_RESET}:")
+            for ln in s["last_assistant_msg"].split("\n"):
+                parts.append(f"  {_C_DIM}\u2502{_C_RESET}  {ln}")
 
-    parts.append("")
-    parts.append("=" * 60)
+        parts.append("")  # blank line between sessions
 
     _pager("\n".join(parts))
 
     while True:
         action = _read_line(
-            f"\nSelect session (1-{len(sessions)}) to view [Esc=back]: "
+            f"\nSelect session (1-{len(sessions)}, space separated) "
+            f"to view [Esc=back]: "
         )
         if action is None:
             return None
         if not action.strip():
             continue
-        try:
-            idx = int(action.strip()) - 1
-            if 0 <= idx < len(sessions):
-                return sessions[idx]["path"]
-            print("Invalid selection.")
-        except ValueError:
-            print("Invalid input.")
+        ids = _parse_ids(action, len(sessions))
+        if ids is not None:
+            return [sessions[i - 1]["path"] for i in sorted(set(ids))]
 
 
 def interactive_list() -> None:
@@ -230,10 +226,11 @@ def interactive_list() -> None:
         if selected_project is None:
             return
 
-        session_path = _stage_sessions(selected_project)
-        if session_path is None:
-            # Esc in stage 2 -> go back to project list
-            continue
+        # Stage 2 loop: Esc in stage 3 → back here (session list)
+        while True:
+            session_paths = _stage_sessions(selected_project)
+            if session_paths is None:
+                break  # Esc in stage 2 → back to stage 1
 
-        browse_session(session_path)
-        return
+            browse_session(session_paths)
+            # browse_session returned (Esc or completion) → back to stage 2

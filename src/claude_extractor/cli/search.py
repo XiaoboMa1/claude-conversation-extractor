@@ -63,13 +63,18 @@ def _format_session_matches(
 ) -> Tuple[str, List[Path]]:
     """Format session match list for pager display.
 
-    Each session shows:
-    - First match per message: 3-line context before + match + 3-line after
-    - Subsequent matches in same message: just the match line
+    Uses colored session headers (bold cyan ``━━``), yellow match
+    labels, colored speaker roles, and ``│`` gutter to visually
+    separate message content from structural elements.
 
     Returns (formatted_text, ordered_session_paths).
     """
-    lines = ["=" * 60]
+    from .browser import (
+        _C_BOLD, _C_CYAN, _C_DIM, _C_GREEN, _C_MAGENTA,
+        _C_RESET, _C_YELLOW, _display_width,
+    )
+
+    out: List[str] = []
     session_paths: List[Path] = []
 
     for i, (jsonl_path, matches) in enumerate(sessions.items(), 1):
@@ -81,35 +86,50 @@ def _format_session_matches(
             display_name = session_id[:8]
 
         total_matches = sum(m["match_count"] for m in matches)
-        lines.append("")
-        lines.append(
-            f"{i}. Session {session_id[:8]}... ({display_name})  "
-            f"({total_matches} match(es))"
+
+        # ── Session header (bold cyan with ━━ rule) ──
+        header_text = (
+            f" {i}. {session_id[:8]}... ({display_name})"
+            f" \u2014 {total_matches} match(es) "
+        )
+        rule_pad = max(2, 60 - _display_width(header_text) - 2)
+        pad = "\u2501" * rule_pad
+        out.append(
+            f"{_C_BOLD}{_C_CYAN}\u2501\u2501{header_text}{pad}{_C_RESET}"
         )
 
         match_num = 0
         for m in matches:
             speaker = m["speaker"]
+            sp_color = _C_GREEN if speaker == "user" else _C_MAGENTA
+            sp_label = f"{sp_color}{speaker}{_C_RESET}"
 
-            # First match in this message: full context
+            # First match: label line + gutter content lines
             match_num += 1
             context = _strip_xml_tags(m["first_context"])
             ctx_lines = context.split("\n")
             truncated = [_truncate_line(ln) for ln in ctx_lines]
-            preview = "\n      ".join(truncated)
-            lines.append(f"   match {match_num}: {speaker}: {preview}")
 
-            # Subsequent matches: just the match line
+            out.append(
+                f"  {_C_YELLOW}match {match_num}{_C_RESET}  {sp_label}:"
+            )
+            for ln in truncated:
+                out.append(f"  {_C_DIM}\u2502{_C_RESET}  {ln}")
+
+            # Subsequent matches: label + single gutter line
             for other_line in m.get("other_lines", []):
                 match_num += 1
                 clean = _strip_xml_tags(other_line).strip()
-                lines.append(
-                    f"   match {match_num}: {speaker}: {_truncate_line(clean)}"
+                out.append(
+                    f"  {_C_YELLOW}match {match_num}{_C_RESET}  {sp_label}:"
+                )
+                out.append(
+                    f"  {_C_DIM}\u2502{_C_RESET}  {_truncate_line(clean)}"
                 )
 
-    lines.append("")
-    lines.append("=" * 60)
-    return "\n".join(lines), session_paths
+        out.append("")  # blank line between sessions
+
+    return "\n".join(out), session_paths
 
 
 # ── Stages ────────────────────────────────────────────────────────
@@ -189,56 +209,49 @@ def _stage_find_sessions(
 def _stage_find_messages(selected_paths: List[Path]) -> None:
     """Stage 3: load messages from selected sessions, preview and extract.
 
-    Combines messages from all selected sessions with sequential IDs,
-    then runs the same preview -> view -> extract flow as --list.
+    Delegates to ``browse_session`` which handles message loading, merging,
+    preview, full view, and extraction.
     """
-    from .browser import _stage_message_list, _stage_message_view
-    from ..session.loader import load_messages
+    from .browser import browse_session
 
-    all_messages: List[Dict] = []
-    next_id = 1
-    for path in selected_paths:
-        msgs = load_messages(path)
-        for msg in msgs:
-            msg["id"] = next_id
-            next_id += 1
-            all_messages.append(msg)
-
-    if not all_messages:
-        print("No messages found in selected sessions.")
-        return
-
-    # Reuse --list stages 3-4 (message preview -> full view -> extract)
-    while True:
-        selected_ids = _stage_message_list(all_messages)
-        if selected_ids is None:
-            return
-
-        _stage_message_view(all_messages, selected_ids, selected_paths[0])
-        return
+    browse_session(selected_paths)
 
 
 # ── Entry points ──────────────────────────────────────────────────
 
 
-def find_interactive(keyword: Optional[str] = None) -> None:
+def find_interactive(
+    keyword: Optional[str] = None, *, use_regex: bool = False
+) -> None:
     """Three-stage interactive search.
 
     Called by ``extract --find [keyword]`` and ``claude-search [keyword]``.
+    When *use_regex* is True, *keyword* is treated as a regex pattern.
     """
+    import re as _re
     from .browser import _read_line
 
     if not keyword:
-        kw = _read_line("Search keyword: ")
+        prompt = "Search regex: " if use_regex else "Search keyword: "
+        kw = _read_line(prompt)
         if kw is None or not kw.strip():
             return
         keyword = kw.strip()
 
-    print(f"\nSearching for: '{keyword}' ...")
+    # Validate regex early so the user gets a clear error
+    if use_regex:
+        try:
+            _re.compile(keyword)
+        except _re.error as e:
+            print(f"\nInvalid regex pattern: {e}")
+            return
+
+    mode_label = "regex" if use_regex else "keyword"
+    print(f"\nSearching for {mode_label}: '{keyword}' ...")
 
     searcher = ConversationSearcher()
     grouped = searcher.search_for_display(
-        keyword, case_sensitive=False, context_lines=3
+        keyword, case_sensitive=False, context_lines=3, use_regex=use_regex,
     )
 
     if not grouped:
@@ -256,17 +269,18 @@ def find_interactive(keyword: Optional[str] = None) -> None:
             if selected_project is None:
                 return
 
-        # Stage 2: session selection
-        sessions = by_project[selected_project]
-        selected_paths = _stage_find_sessions(sessions)
-        if selected_paths is None:
-            if len(by_project) == 1:
-                return
-            continue  # back to project selection
+        # Stage 2 loop: Esc in stage 3 → back here (session match list)
+        while True:
+            sessions = by_project[selected_project]
+            selected_paths = _stage_find_sessions(sessions)
+            if selected_paths is None:
+                if len(by_project) == 1:
+                    return  # single project, nowhere to go back
+                break  # Esc in stage 2 → back to stage 1
 
-        # Stage 3: message view + extract
-        _stage_find_messages(selected_paths)
-        return
+            # Stage 3: message view + extract
+            _stage_find_messages(selected_paths)
+            # _stage_find_messages returned (Esc or completion) → back to stage 2
 
 
 def main():

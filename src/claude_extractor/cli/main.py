@@ -138,6 +138,13 @@ Examples:
     )
 
     parser.add_argument(
+        "-r",
+        "--regex",
+        action="store_true",
+        help="Treat --find keyword as a regex pattern instead of literal substring.",
+    )
+
+    parser.add_argument(
         "--inspect",
         type=str,
         metavar="SESSION_PREFIX",
@@ -167,7 +174,7 @@ Examples:
     # Handle --find mode
     if args.find is not None:
         from .search import find_interactive
-        find_interactive(args.find or None)
+        find_interactive(args.find or None, use_regex=args.regex)
         return
 
     # Handle interactive mode

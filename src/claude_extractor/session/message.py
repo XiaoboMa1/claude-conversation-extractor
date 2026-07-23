@@ -23,8 +23,10 @@ NOISE_PREFIXES = [
     "You've hit your limit",
     "Prompt is too long",
     "No response requested",
-    "[Request interrupted",
     "No response needed",
+    "No response required",
+    "[Request interrupted",
+    "Tool use interrupted",
 ]
 
 # Skills messages start with this prefix.  They are not noise per se
@@ -130,12 +132,19 @@ def get_first_meaningful_message(
                     continue
 
                 clean = _clean_for_display(text)
-                if clean and len(clean) > 3:
+                if not clean or len(clean) <= 3:
+                    continue
+
+                # Strip skill template — only keep user args
+                if is_skill_message(clean):
+                    clean = strip_skill_prompt(clean)
+                    if not clean:
+                        continue  # pure invocation, no user input
                     lines = [ln for ln in clean.split("\n") if ln.strip()]
-                    if is_skill_message(text):
-                        # Show tail for skill invocations
-                        return "\n".join(lines[-max_lines:])
-                    return "\n".join(lines[:max_lines])
+                    return "\n".join(lines[-max_lines:])
+
+                lines = [ln for ln in clean.split("\n") if ln.strip()]
+                return "\n".join(lines[:max_lines])
     except (OSError, IOError):
         pass
     return ""
@@ -169,8 +178,16 @@ def get_last_meaningful_message(
                     continue
 
                 clean = _clean_for_display(text)
-                if clean and len(clean) > 3:
-                    last_clean = clean
+                if not clean or len(clean) <= 3:
+                    continue
+
+                # Strip skill template — only keep user args
+                if is_skill_message(clean):
+                    clean = strip_skill_prompt(clean)
+                    if not clean:
+                        continue
+
+                last_clean = clean
     except (OSError, IOError):
         pass
 
@@ -209,8 +226,16 @@ def get_last_message_tail(
                     continue
 
                 clean = _clean_for_display(text)
-                if clean and len(clean) > 3:
-                    last_clean = clean
+                if not clean or len(clean) <= 3:
+                    continue
+
+                # Strip skill template — only keep user args
+                if is_skill_message(clean):
+                    clean = strip_skill_prompt(clean)
+                    if not clean:
+                        continue
+
+                last_clean = clean
     except (OSError, IOError):
         pass
 

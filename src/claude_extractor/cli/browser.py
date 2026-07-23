@@ -19,11 +19,23 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from ..session.loader import load_messages
 from ..session.resolver import get_session_display_name
+
+
+# ── ANSI color constants ──────────────────────────────────────────
+
+_C_RESET = "\033[0m"
+_C_BOLD = "\033[1m"
+_C_DIM = "\033[2m"
+_C_CYAN = "\033[36m"
+_C_YELLOW = "\033[33m"
+_C_GREEN = "\033[32m"
+_C_MAGENTA = "\033[35m"
 
 
 # ── Terminal input (Esc-aware) ─────────────────────────────────────
@@ -92,52 +104,297 @@ def _read_line_win(prompt: str) -> Optional[str]:
             sys.stdout.flush()
 
 
+# ── VT/ANSI support ──────────────────────────────────────────────
+
+
+def _enable_vt_processing() -> bool:
+    """Enable VT/ANSI escape processing on Windows console.
+
+    Required for cursor positioning and alternate screen buffer.
+    Always returns True on non-Windows (ANSI natively supported).
+    """
+    if sys.platform != "win32":
+        return True
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+        mode = ctypes.c_ulong()
+        if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            return False
+        mode.value |= 0x0004  # ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        return bool(kernel32.SetConsoleMode(handle, mode))
+    except Exception:
+        return False
+
+
+# ── Display width / line wrapping ─────────────────────────────────
+
+
+def _display_width(text: str) -> int:
+    """Terminal display width accounting for wide (CJK) characters.
+
+    East Asian Fullwidth/Wide characters occupy 2 columns;
+    all others occupy 1.  ANSI escape sequences are zero-width.
+    """
+    w = 0
+    i = 0
+    n = len(text)
+    while i < n:
+        # Skip ANSI escape sequences (\033[...m)
+        if text[i] == "\033" and i + 1 < n and text[i + 1] == "[":
+            i += 2
+            while i < n and text[i] != "m":
+                i += 1
+            i += 1  # skip 'm'
+            continue
+        if unicodedata.east_asian_width(text[i]) in ("F", "W"):
+            w += 2
+        else:
+            w += 1
+        i += 1
+    return w
+
+
+def _wrap_lines_for_display(lines: list, width: int) -> list:
+    """Wrap logical lines into display rows that fit *width* columns.
+
+    Accounts for CJK double-width characters and ANSI escape
+    sequences (zero-width, state carried across line breaks).
+    Tabs are expanded to 4 spaces before wrapping.
+    """
+    if width <= 0:
+        return list(lines)
+    wrapped: list = []
+    for line in lines:
+        line = line.expandtabs(4)
+        if not line:
+            wrapped.append("")
+            continue
+        dw = _display_width(line)
+        if dw <= width:
+            wrapped.append(line)
+            continue
+        # ANSI-aware character-by-character wrap
+        row: list = []
+        row_w = 0
+        active_codes: list = []  # ANSI codes in effect for continuation
+        i = 0
+        n = len(line)
+        while i < n:
+            # ANSI escape sequence? pass through at zero width
+            if line[i] == "\033" and i + 1 < n and line[i + 1] == "[":
+                j = i + 2
+                while j < n and line[j] != "m":
+                    j += 1
+                if j < n:
+                    j += 1
+                code = line[i:j]
+                row.append(code)
+                if code == "\033[0m":
+                    active_codes.clear()
+                else:
+                    active_codes.append(code)
+                i = j
+                continue
+            ch = line[i]
+            ch_w = 2 if unicodedata.east_asian_width(ch) in ("F", "W") else 1
+            if row_w + ch_w > width:
+                row.append("\033[0m")
+                wrapped.append("".join(row))
+                row = list(active_codes) + [ch]
+                row_w = ch_w
+            else:
+                row.append(ch)
+                row_w += ch_w
+            i += 1
+        if row:
+            wrapped.append("".join(row))
+    return wrapped
+
+
 # ── Pager ──────────────────────────────────────────────────────────
 
 
 def _pager(text: str) -> None:
-    """Display text in system pager (less/more). Scroll with Enter, quit with q.
+    """Display text in a scrollable pager.
 
-    Tries ``less -R`` first (available in Git Bash on Windows), then
-    falls back to ``more``, then to a simple built-in pager.
+    Tries ``less -R`` first (supports arrow keys, search, etc.).
+    On non-Windows, also tries ``more``.
+    Falls back to a built-in scrollable pager with arrow key support.
     """
-    # Try less, then more
-    for cmd in (["less", "-R"], ["more"]):
+    # Try less first (best option on all platforms)
+    try:
+        proc = subprocess.Popen(
+            ["less", "-R"],
+            stdin=subprocess.PIPE,
+            encoding="utf-8",
+            errors="replace",
+        )
+        proc.communicate(input=text)
+        if proc.returncode == 0:
+            return
+        # less exited with error — fall through to built-in pager
+    except (FileNotFoundError, OSError):
+        pass
+
+    # On non-Windows, try more (Windows more lacks arrow key support)
+    if sys.platform != "win32":
         try:
             proc = subprocess.Popen(
-                cmd,
+                ["more"],
                 stdin=subprocess.PIPE,
                 encoding="utf-8",
                 errors="replace",
             )
             proc.communicate(input=text)
-            if proc.returncode is not None:
+            if proc.returncode == 0:
                 return
         except (FileNotFoundError, OSError):
-            continue
+            pass
 
-    # Built-in fallback: page line by line
     _builtin_pager(text)
 
 
 def _builtin_pager(text: str) -> None:
-    """Simple built-in pager: shows one screenful at a time."""
+    """Built-in pager with arrow key scrolling on Windows.
+
+    Uses ANSI escape codes and alternate screen buffer for
+    full-screen rendering.  Falls back to a simple page-by-page
+    display when ANSI support is unavailable.
+    """
     lines = text.split("\n")
+    total = len(lines)
+    height = shutil.get_terminal_size().lines - 1  # -1 for status bar
+
+    if total <= height:
+        sys.stdout.write(text + "\n")
+        return
+
+    if sys.platform == "win32" and _enable_vt_processing():
+        _scrollable_pager_win(lines)
+    else:
+        _simple_pager(lines)
+
+
+def _scrollable_pager_win(lines: list) -> None:
+    """Windows full-screen scrollable pager.
+
+    Uses alternate screen buffer and msvcrt for raw key input.
+    Long lines are wrapped to terminal width (CJK-aware).
+    Controls: Up/Down arrows, PgUp/PgDn, Home/End, Space, Enter,
+    b (page up), q or Esc to quit.
+    """
+    import msvcrt
+
+    raw_lines = lines          # keep originals for re-wrapping on resize
+    display_lines: list = []
+    last_width = 0
+    offset = 0
+
+    # Enter alternate screen buffer, hide cursor
+    sys.stdout.write("\033[?1049h\033[?25l")
+    sys.stdout.flush()
+
+    try:
+        while True:
+            # Re-read terminal size each frame (handles resize)
+            term = shutil.get_terminal_size()
+            height = max(1, term.lines - 1)
+            width = term.columns
+
+            # Re-wrap when terminal width changes
+            if width != last_width:
+                display_lines = _wrap_lines_for_display(raw_lines, width)
+                last_width = width
+
+            total = len(display_lines)
+            max_offset = max(0, total - height)
+            offset = min(offset, max_offset)
+
+            _draw_pager_frame(display_lines, offset, height, width, total)
+
+            ch = msvcrt.getwch()
+
+            if ch in ("\x00", "\xe0"):
+                scan = msvcrt.getwch()
+                if scan == "H":        # Up arrow
+                    offset = max(0, offset - 1)
+                elif scan == "P":      # Down arrow
+                    offset = min(max_offset, offset + 1)
+                elif scan == "I":      # Page Up
+                    offset = max(0, offset - height)
+                elif scan == "Q":      # Page Down
+                    offset = min(max_offset, offset + height)
+                elif scan == "G":      # Home
+                    offset = 0
+                elif scan == "O":      # End
+                    offset = max_offset
+            elif ch.lower() == "q" or ch == "\x1b":
+                break
+            elif ch == " ":            # Space = page down
+                offset = min(max_offset, offset + height)
+            elif ch == "\r":           # Enter = line down
+                offset = min(max_offset, offset + 1)
+            elif ch == "b":            # b = page up (less-style)
+                offset = max(0, offset - height)
+            elif ch == "\x03":         # Ctrl-C
+                break
+    finally:
+        # Restore: show cursor, leave alternate screen
+        sys.stdout.write("\033[?25h\033[?1049l")
+        sys.stdout.flush()
+
+
+def _draw_pager_frame(
+    lines: list, offset: int, height: int, width: int, total: int,
+) -> None:
+    """Render one frame of the scrollable pager.
+
+    Uses absolute cursor positioning (``ESC[row;1H``) to avoid
+    newline/wrap edge cases with full-width lines.
+    Lines are pre-wrapped by the caller — no truncation here.
+    """
+    end = min(offset + height, total)
+    for row, i in enumerate(range(offset, end)):
+        sys.stdout.write(f"\033[{row + 1};1H")  # 1-based row
+        sys.stdout.write(lines[i])
+        sys.stdout.write("\033[K")  # clear to end of line
+
+    # Fill remaining rows with ~
+    for row in range(end - offset, height):
+        sys.stdout.write(f"\033[{row + 1};1H~\033[K")
+
+    # Status bar in reverse video
+    if offset + height >= total:
+        pos = "(END)"
+    else:
+        pct = (offset + height) * 100 // total
+        pos = f"{pct}%"
+
+    bar = f" {pos} \u2014 \u2191\u2193 scroll  PgUp/PgDn page  q quit "
+    sys.stdout.write(
+        f"\033[{height + 1};1H\033[7m{bar[:width].ljust(width)}\033[0m"
+    )
+    sys.stdout.flush()
+
+
+def _simple_pager(lines: list) -> None:
+    """Fallback page-by-page pager when ANSI support is unavailable."""
     height = shutil.get_terminal_size().lines - 2
 
     for i in range(0, len(lines), height):
-        chunk = lines[i:i + height]
+        chunk = lines[i : i + height]
         sys.stdout.write("\n".join(chunk) + "\n")
         if i + height < len(lines):
             sys.stdout.write(":")
             sys.stdout.flush()
-            # Wait for key
             if sys.platform == "win32":
                 import msvcrt
                 while True:
                     ch = msvcrt.getwch()
                     if ch in ("\x00", "\xe0"):
-                        msvcrt.getwch()  # consume scan code
+                        msvcrt.getwch()
                         continue
                     break
                 sys.stdout.write("\r \r")
@@ -192,14 +449,6 @@ def _role_label(role: str) -> str:
 
 def _separator(width: int = 60) -> str:
     return "=" * min(width, shutil.get_terminal_size().columns)
-
-
-def _print_preview(msg: Dict) -> None:
-    """Print a single message preview block (ID + first/last 3 lines)."""
-    label = _role_label(msg["role"])
-    print(f"\nID {msg['id']}: {label}")
-    for line in msg["preview"].split("\n"):
-        print(f"   {line}")
 
 
 # ── Input parsing ───────────────────────────────────────────────────
@@ -284,16 +533,24 @@ def _render_full_message_with_id(msg: Dict) -> str:
 
 
 def _stage_message_list(messages: List[Dict]) -> Optional[List[int]]:
-    """Show previews of all messages, return selected IDs to view."""
-    print(f"\n{len(messages)} messages:\n")
-    print(_separator())
-
-    for msg in messages:
-        _print_preview(msg)
-
+    """Show previews of all messages in pager, return selected IDs."""
     max_id = messages[-1]["id"]
 
-    print("\n" + _separator())
+    # Build preview text for pager (with colored ID / role labels)
+    parts = [f"{len(messages)} messages:\n", _separator()]
+    for msg in messages:
+        label = _role_label(msg["role"])
+        role_color = _C_GREEN if msg["role"] == "user" else _C_MAGENTA
+        parts.append(
+            f"\n{_C_BOLD}ID {msg['id']}{_C_RESET}: "
+            f"{role_color}{label}{_C_RESET}"
+        )
+        for line in msg["preview"].split("\n"):
+            parts.append(f"   {line}")
+    parts.append("\n" + _separator())
+
+    _pager("\n".join(parts))
+
     while True:
         choice = _read_line(
             f"\nSelect message IDs to view (1-{max_id}, space separated) [Esc=back]: "
@@ -402,28 +659,39 @@ def _save_messages_to_file(
 # ── Public entry point ──────────────────────────────────────────────
 
 
-def browse_session(session_path: Path) -> None:
-    """Interactive 2-stage message browser for a single session.
+def browse_session(session_paths: List[Path]) -> None:
+    """Interactive message browser for one or more sessions.
 
-    Called after listing.py selects a session (stages 1-2).
+    Called after listing.py or search.py selects sessions.
+    Loads and merges messages from all paths with sequential IDs.
     Stage 3: preview list -> Stage 4: full view + copy/save.
-    After extraction completes, exits back to session list.
     Esc at any prompt goes back one level.
     """
-    display_name = get_session_display_name(session_path)
-    print(f"\nLoading messages for: {display_name} ...")
+    if len(session_paths) == 1:
+        display_name = get_session_display_name(session_paths[0])
+        print(f"\nLoading messages for: {display_name} ...")
+    else:
+        print(f"\nLoading messages from {len(session_paths)} session(s) ...")
 
-    messages = load_messages(session_path)
-    if not messages:
-        print("No messages found in this session.")
+    all_messages: List[Dict] = []
+    next_id = 1
+    for path in session_paths:
+        msgs = load_messages(path)
+        for msg in msgs:
+            msg["id"] = next_id
+            next_id += 1
+            all_messages.append(msg)
+
+    if not all_messages:
+        print("No messages found in selected session(s).")
         return
 
-    # Stage 3 -> Stage 4 loop (Esc in stage 3 exits to session list)
+    # Stage 3 -> Stage 4 loop
+    # Esc in stage 3 → back to caller (stage 2 session list)
+    # Esc or completion in stage 4 → back to stage 3
     while True:
-        selected_ids = _stage_message_list(messages)
+        selected_ids = _stage_message_list(all_messages)
         if selected_ids is None:
             return
 
-        _stage_message_view(messages, selected_ids, session_path)
-        # After stage 4 (extract done or Esc), exit entirely
-        return
+        _stage_message_view(all_messages, selected_ids, session_paths[0])

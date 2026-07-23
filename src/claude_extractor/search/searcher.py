@@ -7,6 +7,7 @@ modes.py and semantic.py.
 """
 
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -14,6 +15,7 @@ from typing import Dict, List, Optional
 from .helpers import SearchResult, clean_for_search, extract_content
 from .modes import search_exact, search_regex, search_smart
 from .semantic import get_conversation_topics, load_nlp, search_semantic
+from ..session.message import is_noise_message, is_skill_message, strip_skill_prompt
 
 
 class ConversationSearcher:
@@ -169,8 +171,16 @@ class ConversationSearcher:
                     if not content:
                         continue
 
-                    # Strip XML noise before searching
+                    if is_noise_message(content):
+                        continue
+
                     content = clean_for_search(content)
+
+                    # Strip skill template — only search user args
+                    if is_skill_message(content):
+                        content = strip_skill_prompt(content)
+                        if not content:
+                            continue
 
                     compare = content if case_sensitive else content.lower()
                     if search_q not in compare:
@@ -219,6 +229,7 @@ class ConversationSearcher:
         search_dir: Optional[Path] = None,
         case_sensitive: bool = False,
         context_lines: int = 3,
+        use_regex: bool = False,
     ) -> Dict[Path, List[Dict]]:
         """Search all sessions for interactive display.
 
@@ -230,6 +241,8 @@ class ConversationSearcher:
         - ``first_context``: *context_lines* before + match line +
           *context_lines* after for the first hit
         - ``other_lines``: bare match-line strings for 2nd+ hits
+
+        When *use_regex* is True, *query* is compiled as a regex pattern.
         """
         if search_dir is None:
             search_dir = Path.home() / ".claude" / "projects"
@@ -241,10 +254,16 @@ class ConversationSearcher:
             if "subagents" not in f.parts
         ]
 
+        # Pre-compile regex once for all files
+        regex = None
+        if use_regex:
+            flags = 0 if case_sensitive else re.IGNORECASE
+            regex = re.compile(query, flags)
+
         grouped: Dict[Path, List[Dict]] = {}
         for jsonl_file in jsonl_files:
             matches = self._search_file_for_display(
-                jsonl_file, query, case_sensitive, context_lines
+                jsonl_file, query, case_sensitive, context_lines, regex,
             )
             if matches:
                 grouped[jsonl_file] = matches
@@ -256,15 +275,24 @@ class ConversationSearcher:
         query: str,
         case_sensitive: bool,
         context_lines: int,
+        regex: Optional["re.Pattern[str]"] = None,
     ) -> List[Dict]:
         """Search one JSONL file for interactive display.
 
         Returns one entry per JSONL message that contains the query.
         First hit gets surrounding-line context; subsequent hits are
         represented by their match line only.
+
+        When *regex* is provided, it is used for matching instead of
+        substring search.
         """
         results: List[Dict] = []
         search_q = query if case_sensitive else query.lower()
+
+        def _line_matches(line: str) -> bool:
+            if regex is not None:
+                return regex.search(line) is not None
+            return search_q in line
 
         try:
             with open(jsonl_file, "r", encoding="utf-8") as f:
@@ -282,18 +310,41 @@ class ConversationSearcher:
                     if not content:
                         continue
 
-                    content = clean_for_search(content)
-                    compare = content if case_sensitive else content.lower()
-                    if search_q not in compare:
+                    if is_noise_message(content):
                         continue
 
+                    content = clean_for_search(content)
+
+                    # Strip skill template — only search user args
+                    if is_skill_message(content):
+                        content = strip_skill_prompt(content)
+                        if not content:
+                            continue
+
+                    # Quick whole-message check before per-line scan
+                    if regex is not None:
+                        if not regex.search(content):
+                            continue
+                    else:
+                        compare = content if case_sensitive else content.lower()
+                        if search_q not in compare:
+                            continue
+
                     content_lines = content.split("\n")
-                    compare_lines = compare.split("\n")
+                    # Per-line matching (regex uses original lines;
+                    # substring uses lowered lines)
+                    if regex is not None:
+                        compare_lines = content_lines
+                    else:
+                        compare_lines = (
+                            content_lines if case_sensitive
+                            else [ln.lower() for ln in content_lines]
+                        )
 
                     match_indices = [
                         idx
                         for idx, cline in enumerate(compare_lines)
-                        if search_q in cline
+                        if _line_matches(cline)
                     ]
                     if not match_indices:
                         continue
